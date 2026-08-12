@@ -61,9 +61,9 @@ class Game {
       this.minimapCanvas.width = 120;
       this.minimapCanvas.height = 90;
 
-      // Arena size expanded by 70%
-      this.arenaWidth = Math.round(this.width * 1.7);
-      this.arenaHeight = Math.round(this.height * 1.7);
+      // Arena size enlarged by 200% (3.0x viewport width & height)
+      this.arenaWidth = Math.round(this.width * 3.0);
+      this.arenaHeight = Math.round(this.height * 3.0);
     };
     window.addEventListener('resize', resize);
     resize();
@@ -221,39 +221,46 @@ class Game {
     const jumpscare = document.getElementById('jumpscare-overlay');
     if (jumpscare) jumpscare.classList.add('hidden');
 
-    // Spawn Player
+    // Spawn Player at Center of Enlarged 200% Map
     this.player = new window.Entities.Player(this.arenaWidth / 2, this.arenaHeight / 2);
     document.getElementById('banana-count').innerText = this.player.bananaTraps;
 
-    // Spawn Kenan (Enlarged!)
-    this.kenan = new window.Entities.KenanMonster(100, 100, this.difficulty);
+    // Spawn Kenan
+    this.kenan = new window.Entities.KenanMonster(150, 150, this.difficulty);
 
     // Hard Mode Micro Jitter
     const container = document.getElementById('game-container');
     if (this.difficulty === 'hard') container.classList.add('hard-jitter');
     else container.classList.remove('hard-jitter');
 
-    // Expanded Map Obstacles
+    // 200% Expanded Map Obstacles (Distributed across 4 quadrants)
     this.obstacles = [
-      new window.Entities.Obstacle(this.arenaWidth * 0.25, this.arenaHeight * 0.25, 45, 'طاولة ضخمة 1'),
-      new window.Entities.Obstacle(this.arenaWidth * 0.75, this.arenaHeight * 0.25, 45, 'طاولة ضخمة 2'),
-      new window.Entities.Obstacle(this.arenaWidth * 0.50, this.arenaHeight * 0.50, 55, 'عمود ممر رئيسي'),
-      new window.Entities.Obstacle(this.arenaWidth * 0.25, this.arenaHeight * 0.75, 40, 'حاجز خشب 1'),
-      new window.Entities.Obstacle(this.arenaWidth * 0.75, this.arenaHeight * 0.75, 40, 'حاجز خشب 2')
+      new window.Entities.Obstacle(this.arenaWidth * 0.20, this.arenaHeight * 0.20, 50, 'طاولة ضخمة 1'),
+      new window.Entities.Obstacle(this.arenaWidth * 0.80, this.arenaHeight * 0.20, 50, 'طاولة ضخمة 2'),
+      new window.Entities.Obstacle(this.arenaWidth * 0.50, this.arenaHeight * 0.35, 60, 'عمود ممر شمالي'),
+      new window.Entities.Obstacle(this.arenaWidth * 0.50, this.arenaHeight * 0.65, 60, 'عمود ممر جنوبي'),
+      new window.Entities.Obstacle(this.arenaWidth * 0.20, this.arenaHeight * 0.80, 45, 'حاجز خشب 1'),
+      new window.Entities.Obstacle(this.arenaWidth * 0.80, this.arenaHeight * 0.80, 45, 'حاجز خشب 2'),
+      new window.Entities.Obstacle(this.arenaWidth * 0.35, this.arenaHeight * 0.50, 50, 'طاولة وسط غريبة'),
+      new window.Entities.Obstacle(this.arenaWidth * 0.65, this.arenaHeight * 0.50, 50, 'طاولة وسط غريبة 2')
     ];
 
-    // Interactive Corridor Doors
+    // 200% Expanded Map Interactive Corridor Doors
     this.doors = [
-      new window.Entities.InteractiveDoor(this.arenaWidth * 0.38, this.arenaHeight * 0.35, 90, 24, 'باب الممر الشمالي'),
-      new window.Entities.InteractiveDoor(this.arenaWidth * 0.62, this.arenaHeight * 0.65, 90, 24, 'باب الممر الجنوبي')
+      new window.Entities.InteractiveDoor(this.arenaWidth * 0.35, this.arenaHeight * 0.30, 95, 26, 'باب الشمال الغربي'),
+      new window.Entities.InteractiveDoor(this.arenaWidth * 0.65, this.arenaHeight * 0.30, 95, 26, 'باب الشمال الشرقي'),
+      new window.Entities.InteractiveDoor(this.arenaWidth * 0.35, this.arenaHeight * 0.70, 95, 26, 'باب الجنوب الغربي'),
+      new window.Entities.InteractiveDoor(this.arenaWidth * 0.65, this.arenaHeight * 0.70, 95, 26, 'باب الجنوب الشرقي')
     ];
 
-    // Speed Boost Pads
+    // 200% Expanded Map Speed Boost Pads
     this.speedPads = [
-      new window.Entities.SpeedBoostPad(this.arenaWidth * 0.20, this.arenaHeight * 0.50),
-      new window.Entities.SpeedBoostPad(this.arenaWidth * 0.80, this.arenaHeight * 0.50),
-      new window.Entities.SpeedBoostPad(this.arenaWidth * 0.50, this.arenaHeight * 0.20),
-      new window.Entities.SpeedBoostPad(this.arenaWidth * 0.50, this.arenaHeight * 0.80)
+      new window.Entities.SpeedBoostPad(this.arenaWidth * 0.15, this.arenaHeight * 0.50),
+      new window.Entities.SpeedBoostPad(this.arenaWidth * 0.85, this.arenaHeight * 0.50),
+      new window.Entities.SpeedBoostPad(this.arenaWidth * 0.50, this.arenaHeight * 0.15),
+      new window.Entities.SpeedBoostPad(this.arenaWidth * 0.50, this.arenaHeight * 0.85),
+      new window.Entities.SpeedBoostPad(this.arenaWidth * 0.30, this.arenaHeight * 0.30),
+      new window.Entities.SpeedBoostPad(this.arenaWidth * 0.70, this.arenaHeight * 0.70)
     ];
   }
 
