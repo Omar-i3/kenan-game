@@ -42,7 +42,7 @@ class Game {
     this.lightningTimer = 0;
     this.activePowerUp = null;
 
-    this.lastTime = 0;
+    this.lastTime = performance.now();
 
     this.initCanvas();
     this.initUI();
@@ -72,13 +72,15 @@ class Game {
   initUI() {
     // Attempt Auto Screen Orientation Lock to Landscape
     const lockLandscape = () => {
+      window.audioManager.unlockAudio();
       try {
         if (screen.orientation && screen.orientation.lock) {
           screen.orientation.lock('landscape').catch(() => {});
         }
       } catch (e) {}
     };
-    window.addEventListener('touchstart', lockLandscape, { once: true });
+    window.addEventListener('touchstart', lockLandscape, { passive: true });
+    window.addEventListener('pointerdown', lockLandscape, { passive: true });
     lockLandscape();
 
     // Check Orientation for Mobile Prompt Overlay
@@ -102,8 +104,11 @@ class Game {
       if (!el) return;
       let fired = false;
       const fn = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        window.audioManager.unlockAudio();
         if (fired) return;
         fired = true;
         setTimeout(() => { fired = false; }, 250);
@@ -118,6 +123,7 @@ class Game {
     diffBtns.forEach(btn => {
       const handler = (e) => {
         e.stopPropagation();
+        window.audioManager.unlockAudio();
         diffBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         this.difficulty = btn.dataset.diff;
@@ -171,6 +177,7 @@ class Game {
     if (audioBtn) {
       const handler = (e) => {
         e.stopPropagation();
+        window.audioManager.unlockAudio();
         const isMuted = window.audioManager.toggleMute();
         audioBtn.innerText = isMuted ? '🔇 الصوت: مكتوم' : '🔊 الصوت: مفعّل';
         window.hapticsManager.triggerTac();
@@ -253,6 +260,7 @@ class Game {
   startGame() {
     this.setupArena();
     this.state = 'PLAYING';
+    this.lastTime = performance.now();
 
     document.getElementById('start-screen').classList.add('hidden');
     document.getElementById('pause-screen').classList.add('hidden');
@@ -272,6 +280,7 @@ class Game {
   resumeGame() {
     if (this.state !== 'PAUSED') return;
     this.state = 'PLAYING';
+    this.lastTime = performance.now();
     document.getElementById('pause-screen').classList.add('hidden');
     window.audioManager.startChase();
   }
@@ -562,7 +571,7 @@ class Game {
     for (let y = 0; y < this.arenaHeight; y += gridSize) {
       this.ctx.beginPath();
       this.ctx.moveTo(0, y);
-      this.ctx.lineTo(this.width ? this.arenaWidth : 2000);
+      this.ctx.lineTo(this.arenaWidth, y);
       this.ctx.stroke();
     }
     this.ctx.restore();
@@ -610,11 +619,15 @@ class Game {
   }
 
   loop(timestamp) {
-    const dt = Math.min((timestamp - this.lastTime) / 1000, 0.1);
+    const dt = Math.min(Math.max((timestamp - this.lastTime) / 1000, 0.001), 0.1);
     this.lastTime = timestamp;
 
-    this.update(dt);
-    this.draw();
+    try {
+      this.update(dt);
+      this.draw();
+    } catch (e) {
+      console.error('Loop error:', e);
+    }
 
     requestAnimationFrame((ts) => this.loop(ts));
   }
