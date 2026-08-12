@@ -1,0 +1,8 @@
+{
+  "appId": "com.antigravity.monsterkenan",
+  "appName": "الوحش كنان",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}

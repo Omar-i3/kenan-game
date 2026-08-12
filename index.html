@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>الوحش كنان - Monster Kenan 2D</title>
+  
+  <!-- PWA & Mobile Icons -->
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/png" href="./icon.png">
+  <link rel="apple-touch-icon" href="./icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#ff3366">
+
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+  <div id="game-container">
+    <!-- Lightning Flash Overlay for Rage Storm -->
+    <div id="lightning-overlay"></div>
+
+    <!-- HTML5 Canvas Engine -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Fullscreen Jumpscare Overlay on Game Over -->
+    <div id="jumpscare-overlay" class="jumpscare-overlay hidden">
+      <img src="./kenan.png" alt="Kenan Jumpscare" class="jumpscare-img">
+      <div class="jumpscare-text">صادك كنان! 😱💥</div>
+    </div>
+
+    <!-- Orientation Rotate Device Prompt Overlay -->
+    <div id="orientation-overlay" class="screen-overlay hidden" style="z-index: 30;">
+      <div class="glass-panel">
+        <h2 class="game-title" style="font-size: 2rem;">📱 تدوير الهاتف</h2>
+        <p class="game-subtitle">يرجى تدوير الهاتف للوضع الأفقي (Landscape) للعب!</p>
+      </div>
+    </div>
+
+    <!-- Virtual Joystick Touch Zone -->
+    <div id="joystick-zone">
+      <div id="joystick-base" class="joystick-base">
+        <div id="joystick-stick" class="joystick-stick"></div>
+      </div>
+    </div>
+
+    <!-- HUD Overlay Layer -->
+    <div id="hud-layer" class="hidden">
+      <div class="hud-top-bar">
+        <div class="timer-box">
+          <span class="timer-label">⏱️ الصمود:</span>
+          <span id="hud-timer" class="timer-value">0.0s</span>
+        </div>
+        <button id="pause-btn" class="hud-btn" aria-label="توقف مؤقت">⏸️</button>
+      </div>
+
+      <!-- Minimap (رادار كنان) -->
+      <div id="minimap-container">
+        <canvas id="minimapCanvas"></canvas>
+      </div>
+
+      <!-- Desktop Keyboard Controls Hint Banner (Auto-hidden on mobile/touch) -->
+      <div id="desktop-controls-hint" class="desktop-hint-banner">
+        <span>🎮 التحكم بالحاسوب: <b>WASD/الأسهم</b> للحركة | <b>Space</b> للاندفاع 💨 | <b>E</b> لرمي الموز 🍌</span>
+      </div>
+
+      <!-- Action Skill Buttons (Dash & Banana Trap for Mobile/Tablet) -->
+      <div id="action-buttons-group" class="action-buttons-group">
+        <button id="dash-btn" class="skill-btn" title="اندفاع خاطف (Space / 💨)">
+          <span>💨</span>
+          <div id="dash-cooldown" class="cooldown-overlay hidden">8s</div>
+        </button>
+        <button id="banana-btn" class="skill-btn" title="رمي فخ الموز (E / 🍌)">
+          <span>🍌</span>
+          <div id="banana-count" class="item-badge">2</div>
+        </button>
+      </div>
+
+      <!-- Active Power-Up Banner -->
+      <div id="powerup-indicator" class="powerup-indicator hidden">
+        <span id="powerup-icon" class="powerup-icon">⚡</span>
+        <div class="powerup-bar-container">
+          <div id="powerup-bar-fill" class="powerup-bar-fill"></div>
+        </div>
+      </div>
+
+      <!-- Rage Mode Warning Banner -->
+      <div id="rage-banner" class="rage-alert-banner hidden">
+        🔥 وابل الغضب! كنان المعصب جداً! 🔥
+      </div>
+    </div>
+
+    <!-- Start Screen Overlay -->
+    <div id="start-screen" class="screen-overlay">
+      <div class="glass-panel">
+        <h1 class="game-title">الوحش كنان</h1>
+        <p class="game-subtitle">اهرب من كنان واصمد لأطول فترة ممكنة!</p>
+
+        <div id="start-high-score" class="high-score-badge">
+          👑 الرقم القياسي: <span id="start-high-score-val">0.0</span> ثانية
+        </div>
+
+        <div class="section-label">اختر مستوى الصعوبة:</div>
+        <div class="difficulty-group">
+          <button class="diff-btn active" data-diff="easy">
+            <span>😴 كنان النعسان (سهل)</span>
+            <span class="diff-desc">حركة بطيئة واستجابة متأخرة</span>
+          </button>
+          <button class="diff-btn" data-diff="normal">
+            <span>🏃 كنان الطبيعي (متوسط)</span>
+            <span class="diff-desc">تحدي قياسي ومتوازن</span>
+          </button>
+          <button class="diff-btn" data-diff="hard">
+            <span>😡 كنان المعصب (صعب)</span>
+            <span class="diff-desc">سرعة عالية جداً وارتجاف بصري</span>
+          </button>
+        </div>
+
+        <button id="start-btn" class="btn-primary">🎮 ابدأ اللعب</button>
+        <button id="audio-toggle-btn" class="btn-secondary">🔊 الصوت: مفعّل</button>
+      </div>
+    </div>
+
+    <!-- Pause Screen Overlay -->
+    <div id="pause-screen" class="screen-overlay hidden">
+      <div class="glass-panel">
+        <h2 class="game-title" style="font-size: 2rem;">توقف مؤقت ⏸️</h2>
+        <p class="game-subtitle">خذ نفسك قبل لا يصيدك كنان!</p>
+
+        <button id="resume-btn" class="btn-primary" style="margin-top: 15px;">▶️ استئناف اللعب</button>
+        <button id="pause-main-menu-btn" class="btn-secondary" style="margin-top: 10px;">🏠 القائمة الرئيسية</button>
+      </div>
+    </div>
+
+    <!-- Game Over Screen Overlay -->
+    <div id="game-over-screen" class="screen-overlay hidden">
+      <div class="glass-panel">
+        <h2 class="game-title" style="color: var(--danger-color); text-shadow: 0 0 10px rgba(255, 0, 68, 0.6);">
+          صادك كنان! 😱
+        </h2>
+
+        <div id="loss-quote" class="loss-quote">
+          "تم اصطيادك بنجاح!"
+        </div>
+
+        <div id="loss-title-badge" class="title-badge-card">
+          🏅 اللقب الإنجازي: "عداء الفزعة"
+        </div>
+
+        <div id="new-record-badge" class="new-record-badge hidden">
+          🎉 رقم قياسي جديد! 🎉
+        </div>
+
+        <div class="score-summary">
+          <div class="score-item">
+            <span class="label">وقت الصمود:</span>
+            <span id="final-score" class="val">0.0s</span>
+          </div>
+          <div class="score-item">
+            <span class="label">أعلى نتيجة:</span>
+            <span id="high-score" class="val">0.0s</span>
+          </div>
+        </div>
+
+        <button id="restart-btn" class="btn-primary">🔄 إعادة اللعب</button>
+        <button id="main-menu-btn" class="btn-secondary">🏠 القائمة الرئيسية</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Game Logic Modules -->
+  <script src="./js/audio.js"></script>
+  <script src="./js/audio_effects.js"></script>
+  <script src="./js/haptics.js"></script>
+  <script src="./js/joystick.js"></script>
+  <script src="./js/entities.js"></script>
+  <script src="./js/game.js"></script>
+</body>
+</html>

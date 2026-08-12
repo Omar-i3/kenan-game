@@ -1,0 +1,19 @@
+{
+  "name": "monster-kenan",
+  "version": "1.0.0",
+  "description": "Monster Kenan 2D Android Game",
+  "main": "index.html",
+  "scripts": {
+    "build": "echo 'Building web assets...'"
+  },
+  "keywords": ["game", "android", "canvas"],
+  "author": "AntiGravity",
+  "license": "MIT",
+  "dependencies": {
+    "@capacitor/core": "^6.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/cli": "^6.0.0"
+  }
+}
