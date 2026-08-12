@@ -311,12 +311,27 @@ class Game {
 
   gameOver() {
     this.state = 'GAMEOVER';
+
+    // Pick random Game Over / Jumpscare Voice Option
+    const jumpscareVoiceOptions = [
+      { text: "صَدتك!", voice: "voice_sadtak" },
+      { text: "أكَلتك خلاص!", voice: "voice_akaltak" }
+    ];
+    const chosenVoice = jumpscareVoiceOptions[Math.floor(Math.random() * jumpscareVoiceOptions.length)];
+
     window.audioManager.playImpact();
+    window.audioManager.playVoice(chosenVoice.voice);
     window.hapticsManager.triggerImpact();
 
     const container = document.getElementById('game-container');
     container.classList.add('shake-screen');
     setTimeout(() => container.classList.remove('shake-screen'), 600);
+
+    // Update Jumpscare text
+    const jumpscareTextEl = document.querySelector('.jumpscare-text');
+    if (jumpscareTextEl) {
+      jumpscareTextEl.innerText = `${chosenVoice.text} 😱💥`;
+    }
 
     // Reveal Fullscreen Kenan Jumpscare
     const jumpscare = document.getElementById('jumpscare-overlay');
@@ -375,6 +390,11 @@ class Game {
     if (this.score >= 30.0 && !this.rageTriggered) {
       this.rageTriggered = true;
       this.kenan.setRageMode(true);
+      if (this.kenan) {
+        this.kenan.currentQuote = "خلاص عصّبت!";
+        this.kenan.memeTimer = -3.0; // Keep bubble visible
+      }
+      window.audioManager.playVoice('voice_assabt');
       document.getElementById('rage-banner').classList.remove('hidden');
       window.hapticsManager.triggerTac();
     }

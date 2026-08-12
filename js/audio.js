@@ -1,7 +1,19 @@
 /**
  * Audio Manager for Monster Kenan Game
- * Handles Proximity Chase Audio (3ooo.mp3), Impact SFX (w7sh.mp3), Web Audio API Proximity Volume & Fallback Synth
+ * Handles Proximity Chase Audio (3ooo.mp3), Impact SFX (w7sh.mp3), Voice Clips Mapping, Volume Ducking & Fallback Synth
  */
+const VOICE_FILES = {
+  voice_warak: './voice_warak.mp3',
+  voice_ray7: './voice_ray7.mp3',
+  voice_jwal: './voice_jwal.mp3',
+  voice_mafer: './voice_mafer.mp3',
+  voice_jayak: './voice_jayak.mp3',
+  voice_wagaf: './voice_wagaf.mp3',
+  voice_assabt: './voice_assabt.mp3',
+  voice_sadtak: './voice_sadtak.mp3',
+  voice_akaltak: './voice_akaltak.mp3'
+};
+
 class AudioManager {
   constructor() {
     this.audioContext = null;
@@ -11,7 +23,12 @@ class AudioManager {
     this.isMuted = false;
     this.isPlayingChase = false;
     this.isLoaded = false;
-    
+
+    this.baseVolume = 1.0;
+    this.voiceDuckingMultiplier = 1.0;
+    this.currentVoiceAudio = null;
+    this.voiceAudioMap = {};
+
     // Synth fallback state
     this.synthOscillator = null;
     this.synthGain = null;
@@ -34,6 +51,13 @@ class AudioManager {
 
       this.impactAudio = new Audio('./w7sh.mp3');
       this.impactAudio.preload = 'auto';
+
+      // Preload all voice clips
+      for (const [key, path] of Object.entries(VOICE_FILES)) {
+        const aud = new Audio(path);
+        aud.preload = 'auto';
+        this.voiceAudioMap[key] = aud;
+      }
 
       // Connect chase audio to Web Audio API gain node if supported
       if (this.audioContext && this.chaseAudio) {
@@ -81,19 +105,77 @@ class AudioManager {
     }
   }
 
+  // Play voice clip with overlap prevention & 70% background audio ducking
+  playVoice(voiceKey) {
+    if (this.isMuted) return;
+    this.unlockAudio();
+
+    // 1. Stop any currently playing voice audio clip immediately (prevent overlap)
+    this.stopCurrentVoice();
+
+    const voiceAudio = this.voiceAudioMap[voiceKey];
+    if (!voiceAudio) return;
+
+    this.currentVoiceAudio = voiceAudio;
+    this.currentVoiceAudio.currentTime = 0;
+
+    // 2. Reduce background chase volume by 70% (voiceDuckingMultiplier = 0.3)
+    this.voiceDuckingMultiplier = 0.3;
+    this.applyCurrentVolume();
+
+    const onVoiceEnd = () => {
+      if (this.currentVoiceAudio === voiceAudio) {
+        this.voiceDuckingMultiplier = 1.0;
+        this.applyCurrentVolume();
+        this.currentVoiceAudio = null;
+      }
+    };
+
+    voiceAudio.onended = onVoiceEnd;
+    voiceAudio.onerror = onVoiceEnd;
+
+    const playPromise = voiceAudio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(err => {
+        console.warn(`Voice play failed for ${voiceKey}:`, err);
+        onVoiceEnd();
+      });
+    }
+  }
+
+  stopCurrentVoice() {
+    if (this.currentVoiceAudio) {
+      try {
+        this.currentVoiceAudio.pause();
+        this.currentVoiceAudio.currentTime = 0;
+        this.currentVoiceAudio.onended = null;
+        this.currentVoiceAudio.onerror = null;
+      } catch (e) {}
+      this.currentVoiceAudio = null;
+    }
+    // Restore ducking multiplier
+    this.voiceDuckingMultiplier = 1.0;
+    this.applyCurrentVolume();
+  }
+
+  applyCurrentVolume() {
+    const finalVolume = this.baseVolume * this.voiceDuckingMultiplier;
+    if (this.chaseGainNode) {
+      this.chaseGainNode.gain.setTargetAtTime(finalVolume, this.audioContext.currentTime, 0.05);
+    } else if (this.chaseAudio) {
+      this.chaseAudio.volume = finalVolume;
+    }
+  }
+
   // Dynamic proximity volume & pitch update
   updateProximity(distance, maxDistance, isRage = false) {
     if (this.isMuted || !this.isPlayingChase) return;
 
     // Calculate volume: 1.0 when close (0 distance), 0.10 when far (maxDistance)
     const normDist = Math.min(Math.max(distance / maxDistance, 0), 1);
-    const volume = Math.max(0.1, 1.0 - normDist * 0.85);
+    this.baseVolume = Math.max(0.1, 1.0 - normDist * 0.85);
 
-    if (this.chaseGainNode) {
-      this.chaseGainNode.gain.setTargetAtTime(volume, this.audioContext.currentTime, 0.05);
-    } else if (this.chaseAudio) {
-      this.chaseAudio.volume = volume;
-    }
+    this.applyCurrentVolume();
 
     // Set playback pitch rate for Rage Mode
     if (this.chaseAudio) {
@@ -102,7 +184,8 @@ class AudioManager {
 
     // If using fallback synth
     if (this.isUsingSynth && this.synthGain) {
-      this.synthGain.gain.setValueAtTime(volume * 0.3, this.audioContext.currentTime);
+      const finalVol = this.baseVolume * this.voiceDuckingMultiplier;
+      this.synthGain.gain.setValueAtTime(finalVol * 0.3, this.audioContext.currentTime);
       if (this.synthOscillator) {
         const freq = 120 + (1 - normDist) * 180 + (isRage ? 60 : 0);
         this.synthOscillator.frequency.setValueAtTime(freq, this.audioContext.currentTime);
@@ -112,6 +195,7 @@ class AudioManager {
 
   stopChase() {
     this.isPlayingChase = false;
+    this.stopCurrentVoice();
     if (this.chaseAudio) {
       this.chaseAudio.pause();
       this.chaseAudio.currentTime = 0;
@@ -141,7 +225,7 @@ class AudioManager {
     try {
       this.synthOscillator = this.audioContext.createOscillator();
       this.synthGain = this.audioContext.createGain();
-      
+
       this.synthOscillator.type = 'sawtooth';
       this.synthOscillator.frequency.value = 140;
       this.synthGain.gain.value = 0.2;
@@ -192,6 +276,7 @@ class AudioManager {
   toggleMute() {
     this.isMuted = !this.isMuted;
     if (this.isMuted) {
+      this.stopCurrentVoice();
       if (this.chaseAudio) this.chaseAudio.pause();
       this.stopSynthChase();
     } else if (this.isPlayingChase) {

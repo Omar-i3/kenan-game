@@ -8,18 +8,17 @@ kenanImg.src = './kenan.png';
 let isKenanImgLoaded = false;
 kenanImg.onload = () => { isKenanImgLoaded = true; };
 
-// Floating Meme Quotes List
-const MEME_QUOTES = [
-  "وراك وراك!",
-  "وين رايح؟",
-  "ما فيه مفر!",
-  "هات الجوال!",
-  "ما راح تطلع مني!",
-  "جايك يا غالي!",
-  "سلم نفسك أفضل!",
-  "وين الهروب؟!",
-  "مستحيل تتعداني!"
+// Floating Meme Quotes List & Voice Mapping
+const MEME_VOICE_MAPPING = [
+  { text: "وراك وراك!", voice: "voice_warak" },
+  { text: "وين رايح؟", voice: "voice_ray7" },
+  { text: "هات الجوال!", voice: "voice_jwal" },
+  { text: "ما فيه مفر!", voice: "voice_mafer" },
+  { text: "أنا جايك عشان أقتلك!", voice: "voice_jayak" },
+  { text: "وقّف لا تركض!", voice: "voice_wagaf" }
 ];
+
+const MEME_QUOTES = MEME_VOICE_MAPPING.map(item => item.text);
 
 // Random Meme Loss Quotes for Game Over Screen
 const LOSS_QUOTES = [
@@ -261,8 +260,8 @@ class KenanMonster {
     // Difficulty Settings
     this.configureDifficulty();
 
-    // Meme text timer
-    this.currentQuoteIndex = 0;
+    // Meme text & voice timer
+    this.currentQuote = "وراك وراك!";
     this.memeTimer = 0;
     this.memeInterval = 4.5;
   }
@@ -319,12 +318,16 @@ class KenanMonster {
       this.triggerTeleportJump(playerX, playerY, arenaWidth, arenaHeight, particles);
     }
 
-    // Meme text update
+    // Meme text update & voice playback mapping
     this.memeTimer += dt;
     if (this.memeTimer >= this.memeInterval) {
       this.memeTimer = 0;
-      this.memeInterval = 4 + Math.random() * 2;
-      this.currentQuoteIndex = Math.floor(Math.random() * MEME_QUOTES.length);
+      this.memeInterval = 4.5 + Math.random() * 2.5;
+      const item = MEME_VOICE_MAPPING[Math.floor(Math.random() * MEME_VOICE_MAPPING.length)];
+      this.currentQuote = item.text;
+      if (window.audioManager) {
+        window.audioManager.playVoice(item.voice);
+      }
     }
 
     // Speed calculation
@@ -489,7 +492,7 @@ class KenanMonster {
   }
 
   drawSpeechBubble(ctx) {
-    const text = MEME_QUOTES[this.currentQuoteIndex];
+    const text = this.currentQuote || "وراك وراك!";
     ctx.save();
     ctx.font = 'bold 16px Tajawal, sans-serif';
 
