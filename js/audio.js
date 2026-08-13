@@ -111,7 +111,7 @@ class AudioManager {
   }
 
   /**
-   * Create an Audio element with preload, multiple fallback paths, and tracking.
+   * Create an Audio element with preload, dynamic cache-busting timestamp, multiple fallback paths, and tracking.
    */
   _createAudio(path, addToPool = true) {
     const audio = new Audio();
@@ -128,12 +128,14 @@ class AudioManager {
       filename
     ];
 
-    audio.src = possiblePaths[0];
+    const withCacheBust = (p) => p + (p.includes('?') ? '&' : '?') + 't=' + Date.now();
+
+    audio.src = withCacheBust(possiblePaths[0]);
 
     audio.onerror = () => {
       audio._fallbackIndex = (audio._fallbackIndex || 0) + 1;
       if (audio._fallbackIndex < possiblePaths.length) {
-        audio.src = possiblePaths[audio._fallbackIndex];
+        audio.src = withCacheBust(possiblePaths[audio._fallbackIndex]);
         audio.load();
       }
     };

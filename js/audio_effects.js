@@ -23,14 +23,15 @@ class SoundEffectsManager {
     const audio = new Audio();
     audio.preload = 'auto';
     audio._triedAsset = false;
-    audio.src = path;
+    const withCacheBust = (p) => p + (p.includes('?') ? '&' : '?') + 't=' + Date.now();
+    audio.src = withCacheBust(path);
 
     audio.onerror = () => {
       if (!audio._triedAsset) {
         audio._triedAsset = true;
         // Try ./assets/ fallback for Capacitor/www builds
         const filename = path.split('/').pop();
-        audio.src = './assets/' + filename;
+        audio.src = withCacheBust('./assets/' + filename);
         audio.load();
       }
     };

@@ -2,9 +2,13 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>كوابيس الشلة - Nightmares of the Squad</title>
-  <!-- استبدل سطر الـ viewport الحالي بهذا السطر -->
+
+  <!-- No-Cache Meta Tags (Cache Busting) -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
 
   <!-- PWA & Mobile Icons -->
   <link rel="manifest" href="./manifest.json">
@@ -21,7 +25,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#ff3366">
 
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./style.css?v=2.5">
 </head>
 <body>
 
@@ -340,12 +344,12 @@
   </div>
 
   <!-- Game Logic Modules -->
-  <script src="./js/audio.js"></script>
-  <script src="./js/audio_effects.js"></script>
-  <script src="./js/haptics.js"></script>
-  <script src="./js/joystick.js"></script>
-  <script src="./js/entities.js"></script>
-  <script src="./js/game.js"></script>
+  <script src="./js/audio.js?v=2.5"></script>
+  <script src="./js/audio_effects.js?v=2.5"></script>
+  <script src="./js/haptics.js?v=2.5"></script>
+  <script src="./js/joystick.js?v=2.5"></script>
+  <script src="./js/entities.js?v=2.5"></script>
+  <script src="./js/game.js?v=2.5"></script>
 
   <!-- PWA Service Worker Registration -->
   <script>

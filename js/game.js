@@ -963,13 +963,14 @@ class Game {
     const caughtType = caughtByMonster ? (caughtByMonster.type || 'kenan') : 'kenan';
     const caughtName = caughtByMonster ? (caughtByMonster.name || 'كنان') : 'كنان';
 
-    // 1. Immediately update jumpscare image source BEFORE displaying overlay (Zero-flicker fix!)
+    // 1. Immediately update jumpscare image source BEFORE displaying overlay (Zero-flicker fix with Cache-Busting!)
+    const withCacheBust = (p) => p + (p.includes('?') ? '&' : '?') + 't=' + Date.now();
     const jumpscareImg = document.querySelector('#jumpscare-overlay .jumpscare-img');
     if (jumpscareImg) {
-      if (caughtType === 'aseel') jumpscareImg.src = './assets/aseel.png';
-      else if (caughtType === 'elias') jumpscareImg.src = './assets/elias.png';
-      else if (caughtType === 'qamar') jumpscareImg.src = './assets/qamar.png';
-      else jumpscareImg.src = './kenan.png';
+      if (caughtType === 'aseel') jumpscareImg.src = withCacheBust('./assets/aseel.png');
+      else if (caughtType === 'elias') jumpscareImg.src = withCacheBust('./assets/elias.png');
+      else if (caughtType === 'qamar') jumpscareImg.src = withCacheBust('./assets/qamar.png');
+      else jumpscareImg.src = withCacheBust('./kenan.png');
     }
 
     // 2. Monster-specific catch speech options

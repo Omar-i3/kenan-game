@@ -2,14 +2,17 @@
  * Entities & Game Mechanics (Expansion: Enlarged Kenan, Dash, Banana Traps, Speed Boost Pads, Interactive Doors, Night Mode Flashlight)
  */
 
+// Cache-Busting URL Helper
+const withCacheBust = (path) => path + (path.includes('?') ? '&' : '?') + 't=' + Date.now();
+
 // Image Preloader for Kenan & Player Sprites (Relative paths for GitHub Pages & APK)
 const kenanImg = new Image();
-kenanImg.src = './kenan.png';
+kenanImg.src = withCacheBust('./kenan.png');
 let isKenanImgLoaded = false;
 kenanImg.onload = () => { isKenanImgLoaded = true; };
 
 const playerImg = new Image();
-playerImg.src = './assets/player.png';
+playerImg.src = withCacheBust('./assets/player.png');
 let isPlayerImgLoaded = false;
 playerImg.onload = () => { isPlayerImgLoaded = true; };
 
@@ -18,7 +21,7 @@ const STAGE_BG_IMAGES = {};
 for (let i = 1; i <= 20; i++) {
   const img = new Image();
   const bgNum = ((i - 1) % 10) + 1;
-  img.src = `./Level/bg_stage${bgNum}.png`;
+  img.src = withCacheBust(`./Level/bg_stage${bgNum}.png`);
   STAGE_BG_IMAGES[i] = img;
 }
 
@@ -51,7 +54,7 @@ const ASSET_PATHS = {
 
 for (const [type, path] of Object.entries(ASSET_PATHS)) {
   const img = new Image();
-  img.src = path;
+  img.src = withCacheBust(path);
   ASSET_IMAGES[type] = img;
 }
 
