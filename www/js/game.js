@@ -1818,6 +1818,8 @@ class Game {
   }
 
   draw() {
+    const dpr = window.devicePixelRatio || 1;
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.ctx.clearRect(0, 0, this.width, this.height);
 
     // Dynamic camera scale fixed to 1.0 so map and view on mobile is wide, broad & comfortable
@@ -1968,9 +1970,9 @@ class Game {
       mctx.fill();
     });
 
-    mctx.fillStyle = '#00f0ff';
     this.storyItems.forEach(item => {
       if (item.isCollected) return;
+      mctx.fillStyle = '#00f0ff';
       mctx.beginPath();
       mctx.arc(item.x * scaleX, item.y * scaleY, 2.5, 0, Math.PI * 2);
       mctx.fill();
@@ -1994,9 +1996,16 @@ class Game {
     if (this.kenan) {
       mctx.fillStyle = '#ff0044';
       mctx.beginPath();
-      mctx.arc(this.kenan.x * scaleX, this.kenan.y * scaleY, this.kenan.isBoss ? 7 : 4.5, 0, Math.PI * 2);
+      mctx.arc(this.kenan.x * scaleX, this.kenan.y * scaleY, 4.5, 0, Math.PI * 2);
       mctx.fill();
     }
+
+    this.clones.forEach(clone => {
+      mctx.fillStyle = '#ff00aa';
+      mctx.beginPath();
+      mctx.arc(clone.x * scaleX, clone.y * scaleY, 3, 0, Math.PI * 2);
+      mctx.fill();
+    });
 
     this.activeChaseMonsters.forEach(m => {
       mctx.fillStyle = m.themeColor || '#ff00aa';
@@ -2063,17 +2072,6 @@ const getPWAInstallBtn = () => document.getElementById('pwa-install-btn');
 const getPWASkipBtn = () => document.getElementById('pwa-skip-btn');
 const getPWAManualGuide = () => document.getElementById('pwa-manual-guide');
 
-const requestFullscreenOnAction = () => {
-  try {
-    const docEl = document.documentElement;
-    if (docEl.requestFullscreen && !document.fullscreenElement) {
-      docEl.requestFullscreen().catch(() => {});
-    } else if (docEl.webkitRequestFullscreen && !document.webkitFullscreenElement) {
-      docEl.webkitRequestFullscreen().catch(() => {});
-    }
-  } catch (e) {}
-};
-
 const checkPWAInstallState = () => {
   // فحص هل اللعبة مفتوحة كتطبيق مثبت ومستقل (Standalone PWA)
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches 
@@ -2139,7 +2137,6 @@ window.addEventListener('load', () => {
       sessionStorage.setItem('pwa_skipped', 'true');
       const overlay = getPWAOverlay();
       if (overlay) overlay.style.display = 'none';
-      requestFullscreenOnAction();
     });
   }
 });
@@ -2154,11 +2151,3 @@ window.addEventListener('beforeinstallprompt', (e) => {
     overlay.style.display = 'flex';
   }
 });
-
-// Fullscreen API Trigger on first touch interaction
-window.addEventListener('pointerdown', () => {
-  requestFullscreenOnAction();
-}, { passive: true, once: true });
-window.addEventListener('touchstart', () => {
-  requestFullscreenOnAction();
-}, { passive: true, once: true });

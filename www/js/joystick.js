@@ -27,100 +27,96 @@ class JoystickController {
   }
 
   initTouchAndMouseListeners() {
-    this.touchId = null;
+    this.activePointerId = null;
 
-    const handleStart = (clientX, clientY, target) => {
-      if (
-        target.closest('button, .diff-btn, .btn-primary, .btn-secondary, .hud-btn, .skill-btn, .glass-panel, .screen-overlay') ||
-        (window.game && window.game.state !== 'PLAYING')
-      ) {
+    const handleStart = (clientX, clientY, target, pointerId = 1) => {
+      // Allow joystick only when game is actively playing
+      if (!window.game || window.game.state !== 'PLAYING') {
         return false;
       }
 
-      this.pointerActive = true;
-      this.pointerX = clientX;
-      this.pointerY = clientY;
+      // Check if touch is on an active interactive UI button or active modal
+      if (target && target.closest('button, .diff-btn, .btn-primary, .btn-secondary, .hud-btn, .skill-btn, .pwa-btn, .pwa-skip-btn, .screen-overlay:not(.hidden) .glass-panel, .pwa-modal')) {
+        return false;
+      }
 
-      // Show visual joystick base at touch/click point
+      this.activePointerId = pointerId;
+      this.pointerActive = true;
       this.baseX = clientX;
       this.baseY = clientY;
+
       if (this.base) {
         this.base.style.left = `${this.baseX}px`;
         this.base.style.top = `${this.baseY}px`;
         this.base.classList.add('visible');
       }
+
       this.updateVectorFromPointer(clientX, clientY);
       return true;
     };
 
-    const handleMove = (clientX, clientY) => {
+    const handleMove = (clientX, clientY, pointerId = 1) => {
       if (!this.pointerActive) return;
-      this.pointerX = clientX;
-      this.pointerY = clientY;
+      if (this.activePointerId !== null && this.activePointerId !== pointerId) return;
       this.updateVectorFromPointer(clientX, clientY);
     };
 
-    const handleEnd = () => {
-      this.reset();
+    const handleEnd = (pointerId = 1) => {
+      if (this.activePointerId === null || this.activePointerId === pointerId) {
+        this.reset();
+      }
     };
 
-    // Multi-Touch Aware Touch Listeners
-    window.addEventListener('touchstart', (e) => {
-      if (!e.changedTouches) return;
-      for (let i = 0; i < e.changedTouches.length; i++) {
-        const touch = e.changedTouches[i];
-        if (this.touchId === null) {
-          const started = handleStart(touch.clientX, touch.clientY, touch.target);
-          if (started) {
-            this.touchId = touch.identifier;
-            break;
-          }
-        }
+    // Pointer Events (Unified modern standard for Touch & Mouse across all devices)
+    window.addEventListener('pointerdown', (e) => {
+      if (this.activePointerId === null) {
+        handleStart(e.clientX, e.clientY, e.target, e.pointerId);
       }
+    }, { passive: true });
+
+    window.addEventListener('pointermove', (e) => {
+      if (this.pointerActive && (this.activePointerId === e.pointerId || this.activePointerId === null)) {
+        handleMove(e.clientX, e.clientY, e.pointerId);
+      }
+    }, { passive: true });
+
+    window.addEventListener('pointerup', (e) => {
+      handleEnd(e.pointerId);
+    }, { passive: true });
+
+    window.addEventListener('pointercancel', (e) => {
+      handleEnd(e.pointerId);
+    }, { passive: true });
+
+    // Fallback Touch listeners
+    window.addEventListener('touchstart', (e) => {
+      if (!e.changedTouches || this.activePointerId !== null) return;
+      const t = e.changedTouches[0];
+      handleStart(t.clientX, t.clientY, t.target, t.identifier);
     }, { passive: true });
 
     window.addEventListener('touchmove', (e) => {
-      if (this.touchId === null || !e.touches) return;
+      if (!this.pointerActive || !e.touches) return;
       for (let i = 0; i < e.touches.length; i++) {
-        const touch = e.touches[i];
-        if (touch.identifier === this.touchId) {
-          handleMove(touch.clientX, touch.clientY);
+        const t = e.touches[i];
+        if (this.activePointerId === t.identifier || this.activePointerId === null) {
+          handleMove(t.clientX, t.clientY, t.identifier);
           break;
         }
       }
     }, { passive: true });
 
-    const checkTouchEnd = (e) => {
-      if (this.touchId === null || !e.changedTouches) return;
-      for (let i = 0; i < e.changedTouches.length; i++) {
-        const touch = e.changedTouches[i];
-        if (touch.identifier === this.touchId) {
-          this.touchId = null;
-          handleEnd();
-          break;
+    window.addEventListener('touchend', (e) => {
+      if (e.changedTouches) {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          handleEnd(e.changedTouches[i].identifier);
         }
-      }
-    };
-
-    window.addEventListener('touchend', checkTouchEnd, { passive: true });
-    window.addEventListener('touchcancel', checkTouchEnd, { passive: true });
-
-    // Mouse Listeners for Desktop / Laptop
-    window.addEventListener('mousedown', (e) => {
-      if (e.button === 0 && this.touchId === null) {
-        handleStart(e.clientX, e.clientY, e.target);
+      } else {
+        handleEnd();
       }
     }, { passive: true });
 
-    window.addEventListener('mousemove', (e) => {
-      if (this.pointerActive && this.touchId === null) {
-        handleMove(e.clientX, e.clientY);
-      }
-    }, { passive: true });
-
-    window.addEventListener('mouseup', () => {
-      if (this.touchId === null) handleEnd();
-    }, { passive: true });
+    window.addEventListener('touchcancel', () => handleEnd(), { passive: true });
   }
 
   updateVectorFromPointer(clientX, clientY) {
