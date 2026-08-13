@@ -53,6 +53,7 @@ class Game {
     this.bananaTraps = [];
     this.powerUps = [];
     this.particles = [];
+    this.monsterProjectiles = [];
 
     // Timers & State Flags
     this.powerUpSpawnTimer = 0;
@@ -555,6 +556,7 @@ class Game {
     // Chase Mode Pursuers & Tools Reset
     this.activeChaseMonsters = [];
     this.monsterToolItems = [];
+    this.monsterProjectiles = [];
     this.monsterToolSpawnTimer = 0;
 
     // Slipper Spawn State for Endless Survival Mode
@@ -840,8 +842,9 @@ class Game {
     }
 
     // Stage Boss Fight Setup
-    if (stageData.isBossFight) {
-      if (this.kenan) this.kenan.setAsBoss(stageData.bossHp || 50);
+    if (stageData.isBossFight || stageData.isGrandFinal || stageId === 21) {
+      if (this.kenan) this.kenan.setAsBoss(stageData.bossHp || (stageId === 21 ? 100 : 50));
+      this.activeChaseMonsters.forEach(m => m.setAsBoss(stageData.bossHp || 50));
       document.getElementById('boss-health-container').classList.remove('hidden');
       this.updateBossHpBar();
     }
@@ -1243,24 +1246,76 @@ class Game {
       }
     }
 
-    // Periodically spawn Chapter Tools during Story Mode (Bug 8 Fix)
-    if (this.gameMode === 'STORY') {
-      const stageData = window.Entities.STORY_STAGES.find(s => s.id === this.currentStageId);
-      if (stageData) {
-        this.monsterToolSpawnTimer += dt;
-        if (this.monsterToolSpawnTimer >= 10.0 && this.monsterToolItems.length < 6) {
-          this.monsterToolSpawnTimer = 0;
-          const padding = 250;
-          const tx = padding + Math.random() * (this.arenaWidth - padding * 2);
-          const ty = padding + Math.random() * (this.arenaHeight - padding * 2);
-          if (stageData.chapter === 2) {
-            this.monsterToolItems.push(new window.Entities.MonsterToolItem(tx, ty, 'wand'));
-          } else if (stageData.chapter === 3) {
-            this.monsterToolItems.push(new window.Entities.MonsterToolItem(tx, ty, 'controller'));
-          } else if (stageData.chapter === 4) {
-            this.monsterToolItems.push(new window.Entities.MonsterToolItem(tx, ty, 'tiara'));
+    // Boss Item Attacks Trigger (Cooldown System & Speed/Rage Scaling)
+    if (this.player) {
+      if (this.kenan && (this.kenan.isBoss || this.currentStageId === 21) && this.kenan.canUseItem) {
+        this.kenan.triggerItemAttack(this.player.x, this.player.y, this.monsterProjectiles);
+      }
+
+      this.activeChaseMonsters.forEach(m => {
+        if ((m.isBoss || this.currentStageId === 21 || this.gameMode === 'CHASE') && m.canUseItem) {
+          m.triggerItemAttack(this.player.x, this.player.y, this.monsterProjectiles);
+        }
+      });
+    }
+
+    // Update Monster Projectiles & Collisions with Player
+    for (let i = this.monsterProjectiles.length - 1; i >= 0; i--) {
+      const proj = this.monsterProjectiles[i];
+      proj.update(dt);
+
+      let hit = false;
+      // Check Obstacle Collisions
+      for (const obs of this.obstacles) {
+        if (obs.checkCollision(proj.x, proj.y, proj.radius).collided) {
+          hit = true;
+          break;
+        }
+      }
+
+      // Check Player Collision
+      if (!hit && this.player) {
+        const dist = Math.hypot(this.player.x - proj.x, this.player.y - proj.y);
+        if (dist < (this.player.radius + proj.radius)) {
+          hit = true;
+          window.hapticsManager.triggerImpact();
+          window.soundEffectsManager.playBossHitSound();
+
+          if (this.player.hasShield) {
+            // Shield Absorbs Attack!
+            this.player.hasShield = false;
+            this.player.shieldInvulnerableTimer = 1.5;
+            for (let k = 0; k < 20; k++) {
+              this.particles.push(new window.Entities.Particle(
+                this.player.x, this.player.y,
+                (Math.random() - 0.5) * 300, (Math.random() - 0.5) * 300,
+                '#00f0ff', 9, 0.5
+              ));
+            }
+          } else if (this.player.shieldInvulnerableTimer <= 0) {
+            if (proj.toolType === 'wand') {
+              this.player.slowTimer = 4.0;
+            } else if (proj.toolType === 'controller') {
+              this.player.freezeJoystickTimer = 3.0;
+            } else if (proj.toolType === 'tiara') {
+              this.player.reverseControlTimer = 4.0;
+            } else if (proj.toolType === 'slipper') {
+              this.player.slowTimer = 2.5;
+            }
+
+            for (let k = 0; k < 15; k++) {
+              this.particles.push(new window.Entities.Particle(
+                this.player.x, this.player.y,
+                (Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200,
+                '#ff0044', 8, 0.4
+              ));
+            }
           }
         }
+      }
+
+      if (hit || proj.lifespan <= 0) {
+        this.monsterProjectiles.splice(i, 1);
       }
     }
 
@@ -1665,6 +1720,7 @@ class Game {
     this.particles.forEach(p => p.draw(this.ctx));
     this.clones.forEach(clone => clone.draw(this.ctx));
     this.monsterToolItems.forEach(item => item.draw(this.ctx));
+    this.monsterProjectiles.forEach(p => p.draw(this.ctx));
     this.activeChaseMonsters.forEach(m => m.draw(this.ctx, this.particles, this.isNightMode));
 
     if (this.kenan) this.kenan.draw(this.ctx, this.particles, this.isNightMode);

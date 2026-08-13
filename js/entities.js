@@ -342,6 +342,13 @@ class KenanMonster {
     this.slipTimer = 0; // Banana Slip 2.0s duration
     this.teleportCooldown = 35.0; // Teleport Jump every 35s
 
+    // Tool Cooldown & Rage Scaling System
+    this.toolType = 'slipper';
+    this.itemCooldown = 5.0;
+    this.itemCooldownMax = 10.0;
+    this.canUseItem = false;
+    this.attackCount = 0;
+
     // Difficulty Settings
     this.configureDifficulty();
 
@@ -380,6 +387,32 @@ class KenanMonster {
     this.maxBossHp = hp;
     this.baseSpeed = 220;
     this.turnRate = 0.09;
+    this.itemCooldown = 5.0;
+    this.itemCooldownMax = 10.0;
+    this.canUseItem = false;
+    this.attackCount = 0;
+  }
+
+  triggerItemAttack(playerX, playerY, projectiles) {
+    if (!this.canUseItem) return;
+    this.itemCooldown = this.itemCooldownMax;
+    this.canUseItem = false;
+    this.attackCount += 1;
+
+    // Permanent 12% Speed Scaling
+    this.baseSpeed *= 1.12;
+    this.radius = Math.min(this.radius + 1.5, 115);
+
+    if (projectiles) {
+      projectiles.push(new MonsterProjectile(this.x, this.y, playerX, playerY, 'slipper'));
+    }
+
+    if (window.audioManager) {
+      window.audioManager.playVoice('voice_warak');
+    }
+    if (window.soundEffectsManager) {
+      window.soundEffectsManager.playDashSound();
+    }
   }
 
   freeze(duration = 1.5) {
@@ -392,6 +425,13 @@ class KenanMonster {
   }
 
   update(dt, playerX, playerY, arenaWidth, arenaHeight, obstacles, doors, particles) {
+    // Update Item Cooldown
+    if (this.itemCooldown > 0) {
+      this.itemCooldown -= dt;
+      if (this.itemCooldown <= 0) {
+        this.canUseItem = true;
+      }
+    }
     // Handle Banana Slip
     if (this.slipTimer > 0) {
       this.slipTimer -= dt;
@@ -557,7 +597,52 @@ class KenanMonster {
 
     ctx.restore();
 
+    this.drawCooldownIndicator(ctx);
     this.drawSpeechBubble(ctx);
+  }
+
+  drawCooldownIndicator(ctx) {
+    if (!this.isBoss && this.attackCount === 0 && this.itemCooldown <= 0) return;
+
+    ctx.save();
+    const icon = '👡';
+    const barWidth = 70;
+    const barHeight = 7;
+    const barX = this.x - barWidth / 2;
+    const barY = this.y - this.radius - 24;
+
+    // Badge Box
+    ctx.fillStyle = 'rgba(15, 12, 32, 0.88)';
+    ctx.strokeStyle = this.canUseItem ? '#ff0044' : '#ffcc00';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(barX - 16, barY - 5, barWidth + 32, barHeight + 10, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    // Progress Bar
+    const progress = this.canUseItem ? 1.0 : Math.max(0, 1.0 - (this.itemCooldown / 10.0));
+    ctx.fillStyle = this.canUseItem ? '#ff0044' : '#ffcc00';
+    ctx.beginPath();
+    ctx.roundRect(barX + 4, barY, (barWidth - 4) * progress, barHeight, 3);
+    ctx.fill();
+
+    // Icon & Text
+    ctx.font = 'bold 11px Cairo, sans-serif';
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(icon, barX - 6, barY + 3);
+
+    if (this.canUseItem) {
+      ctx.fillStyle = '#ff0044';
+      ctx.fillText('🔥', barX + barWidth + 8, barY + 3);
+    } else {
+      ctx.fillStyle = '#ffcc00';
+      ctx.fillText(`${Math.ceil(this.itemCooldown)}s`, barX + barWidth + 8, barY + 3);
+    }
+
+    ctx.restore();
   }
 
   drawSpeechBubble(ctx) {
@@ -1635,8 +1720,75 @@ class SlipperProjectile {
 }
 
 /**
- * Generic Chase Monster Entity for Chase Mode (Aseel, Elias, Qamar)
- * Leaves original KenanMonster untouched!
+ * Monster Projectile for Boss Item Attacks (Slipper, Wand, Controller, Tiara)
+ */
+class MonsterProjectile {
+  constructor(x, y, targetX, targetY, toolType = 'slipper') {
+    this.x = x;
+    this.y = y;
+    this.toolType = toolType; // 'slipper', 'wand', 'controller', 'tiara'
+    this.radius = 20;
+    this.speed = 550;
+    this.lifespan = 3.2;
+
+    const angle = Math.atan2(targetY - y, targetX - x);
+    this.vx = Math.cos(angle) * this.speed;
+    this.vy = Math.sin(angle) * this.speed;
+    this.angle = angle;
+  }
+
+  update(dt) {
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.angle += dt * 14;
+    this.lifespan -= dt;
+  }
+
+  draw(ctx) {
+    if (this.lifespan <= 0) return;
+
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle);
+
+    let color = '#ffcc00';
+    let icon = '👡';
+    let imgKey = 'slipper';
+
+    if (this.toolType === 'wand') {
+      color = '#aa00ff';
+      icon = '🪄';
+      imgKey = 'wand';
+    } else if (this.toolType === 'controller') {
+      color = '#00f0ff';
+      icon = '🎮';
+      imgKey = 'controller';
+    } else if (this.toolType === 'tiara') {
+      color = '#ff66cc';
+      icon = '👑';
+      imgKey = 'tiara';
+    }
+
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 18;
+
+    const toolImg = ASSET_IMAGES[imgKey];
+    if (toolImg && toolImg.complete && toolImg.naturalWidth > 0) {
+      const tSize = this.radius * 2.6;
+      ctx.drawImage(toolImg, -tSize / 2, -tSize / 2, tSize, tSize);
+    } else {
+      ctx.font = '26px Cairo, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(icon, 0, 0);
+    }
+
+    ctx.restore();
+  }
+}
+
+/**
+ * Generic Chase Monster Entity for Chase Mode & Story Mode (Aseel, Elias, Qamar)
  */
 class ChaseMonster {
   constructor(type, x, y, difficulty = 'normal') {
@@ -1646,6 +1798,13 @@ class ChaseMonster {
     this.radius = 38;
     this.angle = 0;
     this.difficulty = difficulty;
+    this.isBoss = false;
+
+    // Cooldown & Rage Scaling System
+    this.itemCooldown = 5.0;
+    this.itemCooldownMax = 10.0;
+    this.canUseItem = false;
+    this.attackCount = 0;
 
     this.configureMonster();
 
@@ -1655,6 +1814,17 @@ class ChaseMonster {
     this.speechDisplayTimer = 0;
     this.proximityTriggerCooldown = 0;
     this.freezeTimer = 0;
+  }
+
+  setAsBoss(hp = 50) {
+    this.isBoss = true;
+    this.radius = 70;
+    this.bossHp = hp;
+    this.maxBossHp = hp;
+    this.itemCooldown = 5.0;
+    this.itemCooldownMax = 10.0;
+    this.canUseItem = false;
+    this.attackCount = 0;
   }
 
   freeze(duration = 3.0) {
@@ -1670,6 +1840,26 @@ class ChaseMonster {
     this.speechDisplayTimer = 3.5;
     if (window.audioManager) {
       window.audioManager.playVoice(chosen.voice);
+    }
+  }
+
+  triggerItemAttack(playerX, playerY, projectiles) {
+    if (!this.canUseItem) return;
+    this.itemCooldown = this.itemCooldownMax;
+    this.canUseItem = false;
+    this.attackCount += 1;
+
+    // Permanent 12% Speed Scaling
+    this.baseSpeed *= 1.12;
+    this.radius = Math.min(this.radius + 1.2, 95);
+
+    if (projectiles) {
+      projectiles.push(new MonsterProjectile(this.x, this.y, playerX, playerY, this.toolType || 'wand'));
+    }
+
+    this.triggerQuote();
+    if (window.soundEffectsManager) {
+      window.soundEffectsManager.playDashSound();
     }
   }
 
@@ -1736,6 +1926,14 @@ class ChaseMonster {
       this.proximityTriggerCooldown -= dt;
     }
 
+    // Update Item Cooldown
+    if (this.itemCooldown > 0) {
+      this.itemCooldown -= dt;
+      if (this.itemCooldown <= 0) {
+        this.canUseItem = true;
+      }
+    }
+
     if (this.freezeTimer > 0) {
       this.freezeTimer -= dt;
       return;
@@ -1798,6 +1996,17 @@ class ChaseMonster {
     ctx.save();
     ctx.translate(this.x, this.y);
 
+    // Rage/Boss Glowing Aura if attack count > 0 or isBoss
+    if (this.isBoss || this.attackCount > 0) {
+      const glowColor = this.themeColor || '#aa00ff';
+      ctx.shadowColor = glowColor;
+      ctx.shadowBlur = Math.min(15 + this.attackCount * 4, 35);
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius + 8 + Math.min(this.attackCount, 8), 0, Math.PI * 2);
+      ctx.fillStyle = glowColor + '33';
+      ctx.fill();
+    }
+
     // Freeze visual indicator (icy blue aura only when frozen)
     if (this.freezeTimer > 0) {
       ctx.shadowColor = '#00f0ff';
@@ -1829,9 +2038,62 @@ class ChaseMonster {
 
     ctx.restore();
 
+    this.drawCooldownIndicator(ctx);
+
     if (this.speechDisplayTimer > 0 && this.currentQuote) {
       this.drawSpeechBubble(ctx);
     }
+  }
+
+  drawCooldownIndicator(ctx) {
+    if (!this.isBoss && this.attackCount === 0 && this.itemCooldown <= 0) return;
+
+    ctx.save();
+    const toolIcons = {
+      slipper: '👡',
+      wand: '🪄',
+      controller: '🎮',
+      tiara: '👑'
+    };
+    const icon = toolIcons[this.toolType || 'wand'] || '⚡';
+
+    const barWidth = 60;
+    const barHeight = 6;
+    const barX = this.x - barWidth / 2;
+    const barY = this.y - this.radius - 24;
+
+    // Badge Box
+    ctx.fillStyle = 'rgba(15, 12, 32, 0.88)';
+    ctx.strokeStyle = this.canUseItem ? '#ff0044' : (this.themeColor || '#00f0ff');
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(barX - 16, barY - 5, barWidth + 32, barHeight + 10, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    // Progress Bar
+    const progress = this.canUseItem ? 1.0 : Math.max(0, 1.0 - (this.itemCooldown / 10.0));
+    ctx.fillStyle = this.canUseItem ? '#ff0044' : (this.themeColor || '#00f0ff');
+    ctx.beginPath();
+    ctx.roundRect(barX + 4, barY, (barWidth - 4) * progress, barHeight, 3);
+    ctx.fill();
+
+    // Icon & Text
+    ctx.font = 'bold 11px Cairo, sans-serif';
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(icon, barX - 6, barY + 3);
+
+    if (this.canUseItem) {
+      ctx.fillStyle = '#ff0044';
+      ctx.fillText('🔥', barX + barWidth + 8, barY + 3);
+    } else {
+      ctx.fillStyle = '#ffcc00';
+      ctx.fillText(`${Math.ceil(this.itemCooldown)}s`, barX + barWidth + 8, barY + 3);
+    }
+
+    ctx.restore();
   }
 
   drawSpeechBubble(ctx) {
@@ -1955,6 +2217,7 @@ window.Entities = {
   CollectibleSlipper,
   PushableCrate,
   SlipperProjectile,
+  MonsterProjectile,
   STORY_STAGES,
   STAGE_BG_IMAGES,
   ASSET_IMAGES,
