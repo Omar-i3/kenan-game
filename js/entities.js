@@ -380,20 +380,11 @@ class KenanMonster {
     }
 
     // Target direction to Player
-    let targetDx = playerX - this.x;
-    let targetDy = playerY - this.y;
-    let targetAngle = Math.atan2(targetDy, targetDx);
+    const targetDx = playerX - this.x;
+    const targetDy = playerY - this.y;
+    const targetAngle = Math.atan2(targetDy, targetDx);
 
-    // Obstacle avoidance
-    for (const obs of obstacles) {
-      const distToObs = Math.hypot(obs.x - this.x, obs.y - this.y);
-      if (distToObs < obs.radius + this.radius + 60) {
-        const avoidAngle = Math.atan2(this.y - obs.y, this.x - obs.x);
-        targetAngle = targetAngle * 0.6 + avoidAngle * 0.4;
-      }
-    }
-
-    // Smooth Turn Angle Interpolation
+    // Smooth Turn Angle Interpolation towards Player
     let diffAngle = targetAngle - this.angle;
     while (diffAngle < -Math.PI) diffAngle += Math.PI * 2;
     while (diffAngle > Math.PI) diffAngle -= Math.PI * 2;

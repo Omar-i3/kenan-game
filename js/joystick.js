@@ -1,5 +1,5 @@
 /**
- * Universal Multi-Input Controller (Touch Joystick + Mouse Click & Drag + Full Keyboard WASD/Arrows)
+ * Multi-Input Controller System (Touch/Mouse Screen Direction Pointer + Virtual Joystick + WASD/Arrow Keys)
  */
 class JoystickController {
   constructor() {
@@ -7,8 +7,9 @@ class JoystickController {
     this.base = document.getElementById('joystick-base');
     this.stick = document.getElementById('joystick-stick');
 
-    this.activeTouchId = null;
-    this.isPointerActive = false;
+    this.pointerActive = false;
+    this.pointerX = 0;
+    this.pointerY = 0;
     this.baseX = 0;
     this.baseY = 0;
     this.maxRadius = 55;
@@ -26,101 +27,105 @@ class JoystickController {
   }
 
   initTouchAndMouseListeners() {
-    const handleStart = (clientX, clientY, target, id = 'mouse') => {
+    const handleStart = (clientX, clientY, target) => {
       if (
         target.closest('button, .diff-btn, .btn-primary, .btn-secondary, .hud-btn, .skill-btn, .glass-panel, .screen-overlay') ||
         (window.game && window.game.state !== 'PLAYING')
       ) {
-        return false;
+        return;
       }
 
-      this.activeTouchId = id;
-      this.isPointerActive = true;
+      this.pointerActive = true;
+      this.pointerX = clientX;
+      this.pointerY = clientY;
+
+      // Show visual joystick base at touch/click point
       this.baseX = clientX;
       this.baseY = clientY;
-
       if (this.base) {
         this.base.style.left = `${this.baseX}px`;
         this.base.style.top = `${this.baseY}px`;
         this.base.classList.add('visible');
       }
-      this.updateStickPosition(clientX, clientY);
-      return true;
+      this.updateVectorFromPointer(clientX, clientY);
     };
 
     const handleMove = (clientX, clientY) => {
-      if (!this.isPointerActive && this.activeTouchId === null) return;
-      this.updateStickPosition(clientX, clientY);
+      if (!this.pointerActive) return;
+      this.pointerX = clientX;
+      this.pointerY = clientY;
+      this.updateVectorFromPointer(clientX, clientY);
+    };
+
+    const handleEnd = () => {
+      this.reset();
     };
 
     // Touch Listeners
     window.addEventListener('touchstart', (e) => {
-      if (e.changedTouches && e.changedTouches.length > 0) {
-        const touch = e.changedTouches[0];
-        handleStart(touch.clientX, touch.clientY, e.target, touch.identifier);
+      if (e.touches && e.touches.length > 0) {
+        const touch = e.touches[0];
+        handleStart(touch.clientX, touch.clientY, e.target);
       }
     }, { passive: true });
 
     window.addEventListener('touchmove', (e) => {
-      if (this.activeTouchId === null) return;
-      for (let i = 0; i < e.changedTouches.length; i++) {
-        const touch = e.changedTouches[i];
-        if (touch.identifier === this.activeTouchId) {
-          handleMove(touch.clientX, touch.clientY);
-          break;
-        }
+      if (e.touches && e.touches.length > 0) {
+        const touch = e.touches[0];
+        handleMove(touch.clientX, touch.clientY);
       }
     }, { passive: true });
 
-    window.addEventListener('touchend', (e) => {
-      if (this.activeTouchId === null) return;
-      for (let i = 0; i < e.changedTouches.length; i++) {
-        if (e.changedTouches[i].identifier === this.activeTouchId) {
-          this.reset();
-          break;
-        }
-      }
-    }, { passive: true });
+    window.addEventListener('touchend', handleEnd, { passive: true });
+    window.addEventListener('touchcancel', handleEnd, { passive: true });
 
-    window.addEventListener('touchcancel', () => this.reset(), { passive: true });
-
-    // Mouse Listeners
+    // Mouse Listeners for Desktop / Laptop
     window.addEventListener('mousedown', (e) => {
-      if (e.button !== 0) return; // Only left mouse button
-      handleStart(e.clientX, e.clientY, e.target, 'mouse');
+      if (e.button === 0) {
+        handleStart(e.clientX, e.clientY, e.target);
+      }
     }, { passive: true });
 
     window.addEventListener('mousemove', (e) => {
-      if (this.activeTouchId === 'mouse') {
+      if (this.pointerActive) {
         handleMove(e.clientX, e.clientY);
       }
     }, { passive: true });
 
-    window.addEventListener('mouseup', () => {
-      if (this.activeTouchId === 'mouse') {
-        this.reset();
-      }
-    }, { passive: true });
+    window.addEventListener('mouseup', handleEnd, { passive: true });
   }
 
-  updateStickPosition(clientX, clientY) {
+  updateVectorFromPointer(clientX, clientY) {
     let dx = clientX - this.baseX;
     let dy = clientY - this.baseY;
-    const distance = Math.hypot(dx, dy);
+    let distance = Math.hypot(dx, dy);
 
-    if (distance > 0.1) {
+    // If pointer moved at least 15px from initial touch base, use joystick offset
+    if (distance >= 15) {
       if (distance > this.maxRadius) {
         const angle = Math.atan2(dy, dx);
         dx = Math.cos(angle) * this.maxRadius;
         dy = Math.sin(angle) * this.maxRadius;
       }
-
       if (this.stick) {
         this.stick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
       }
-
       this.inputVector.x = dx / this.maxRadius;
       this.inputVector.y = dy / this.maxRadius;
+    } else {
+      // Direct direction vector relative to screen center (where player character is drawn)
+      const screenCenterX = window.innerWidth / 2;
+      const screenCenterY = window.innerHeight / 2;
+      const pdx = clientX - screenCenterX;
+      const pdy = clientY - screenCenterY;
+      const pdist = Math.hypot(pdx, pdy);
+
+      if (pdist > 20) {
+        this.inputVector.x = pdx / pdist;
+        this.inputVector.y = pdy / pdist;
+      } else {
+        this.inputVector = { x: 0, y: 0 };
+      }
     }
   }
 
@@ -189,8 +194,7 @@ class JoystickController {
   }
 
   reset() {
-    this.activeTouchId = null;
-    this.isPointerActive = false;
+    this.pointerActive = false;
     this.inputVector = { x: 0, y: 0 };
     if (this.base) this.base.classList.remove('visible');
     if (this.stick) this.stick.style.transform = `translate(-50%, -50%)`;
