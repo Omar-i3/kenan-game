@@ -1,5 +1,5 @@
 /**
- * Main Game Controller Engine for Monster Kenan 2D (Expansion & PWA Edition)
+ * Main Game Controller Engine for Monster Kenan 2D (Story Mode & Endless Edition)
  */
 class Game {
   constructor() {
@@ -9,8 +9,18 @@ class Game {
     this.minimapCanvas = document.getElementById('minimapCanvas');
     this.minimapCtx = this.minimapCanvas.getContext('2d');
 
-    this.state = 'MENU'; // MENU, PLAYING, PAUSED, GAMEOVER
+    this.state = 'MENU'; // MENU, STAGE_SELECT, PLAYING, PAUSED, GAMEOVER, VICTORY
+    this.gameMode = 'ENDLESS'; // ENDLESS, STORY
     this.difficulty = 'normal';
+
+    // Story Mode State
+    this.currentStageId = 1;
+    this.unlockedStage = parseInt(localStorage.getItem('kenan_unlocked_stage') || '1', 10);
+    this.storyItems = [];
+    this.pushableCrates = [];
+    this.slippers = [];
+    this.stageItemsCollected = 0;
+    this.stageItemsTotal = 0;
 
     this.score = 0.0;
     this.highScores = {
@@ -41,6 +51,7 @@ class Game {
     this.isNightMode = false;
     this.lightningTimer = 0;
     this.activePowerUp = null;
+    this.weatherRain = false;
 
     this.lastTime = performance.now();
 
@@ -58,19 +69,20 @@ class Game {
       this.canvas.width = this.width;
       this.canvas.height = this.height;
 
-      this.minimapCanvas.width = 120;
-      this.minimapCanvas.height = 90;
+      this.minimapCanvas.width = 110;
+      this.minimapCanvas.height = 80;
 
       // Arena size enlarged by 200% (3.0x viewport width & height)
       this.arenaWidth = Math.round(this.width * 3.0);
       this.arenaHeight = Math.round(this.height * 3.0);
     };
     window.addEventListener('resize', resize);
+    window.addEventListener('orientationchange', () => setTimeout(resize, 200));
     resize();
   }
 
   initUI() {
-    // Attempt Auto Screen Orientation Lock to Landscape
+    // Lock Screen Orientation to Landscape
     const lockLandscape = () => {
       window.audioManager.unlockAudio();
       try {
@@ -83,7 +95,7 @@ class Game {
     window.addEventListener('pointerdown', lockLandscape, { passive: true });
     lockLandscape();
 
-    // Check Orientation for Mobile Prompt Overlay
+    // Check Orientation Prompt Overlay
     const checkOrientation = () => {
       const overlay = document.getElementById('orientation-overlay');
       if (overlay) {
@@ -98,7 +110,7 @@ class Game {
     window.addEventListener('orientationchange', checkOrientation);
     checkOrientation();
 
-    // Button event binder (pointerdown + click for instant touch response)
+    // Fast Button Binder (pointerdown + click)
     const bindBtn = (id, handler) => {
       const el = document.getElementById(id);
       if (!el) return;
@@ -118,7 +130,33 @@ class Game {
       el.addEventListener('click', fn);
     };
 
-    // Difficulty Buttons
+    // Mode Toggle Buttons (Endless vs Story Mode)
+    bindBtn('mode-endless-btn', () => {
+      this.gameMode = 'ENDLESS';
+      document.getElementById('mode-endless-btn').classList.add('active');
+      document.getElementById('mode-story-btn').classList.remove('active');
+      document.getElementById('endless-options-box').classList.remove('hidden');
+      document.getElementById('story-options-box').classList.add('hidden');
+    });
+
+    bindBtn('mode-story-btn', () => {
+      this.gameMode = 'STORY';
+      document.getElementById('mode-story-btn').classList.add('active');
+      document.getElementById('mode-endless-btn').classList.remove('active');
+      document.getElementById('endless-options-box').classList.add('hidden');
+      document.getElementById('story-options-box').classList.remove('hidden');
+    });
+
+    bindBtn('open-story-stages-btn', () => {
+      this.openStageSelectScreen();
+    });
+
+    bindBtn('close-stages-btn', () => {
+      document.getElementById('stage-select-screen').classList.add('hidden');
+      document.getElementById('start-screen').classList.remove('hidden');
+    });
+
+    // Difficulty Buttons for Endless Mode
     const diffBtns = document.querySelectorAll('.diff-btn');
     diffBtns.forEach(btn => {
       const handler = (e) => {
@@ -136,7 +174,7 @@ class Game {
 
     bindBtn('start-btn', () => {
       lockLandscape();
-      this.startGame();
+      this.startEndlessGame();
       window.hapticsManager.triggerTac();
     });
 
@@ -156,12 +194,30 @@ class Game {
     });
 
     bindBtn('restart-btn', () => {
-      this.startGame();
+      if (this.gameMode === 'STORY') {
+        this.startStoryStage(this.currentStageId);
+      } else {
+        this.startEndlessGame();
+      }
       window.hapticsManager.triggerTac();
     });
 
     bindBtn('main-menu-btn', () => {
       this.returnToMenu();
+      window.hapticsManager.triggerTac();
+    });
+
+    bindBtn('next-stage-btn', () => {
+      if (this.currentStageId < 10) {
+        this.startStoryStage(this.currentStageId + 1);
+      } else {
+        this.openStageSelectScreen();
+      }
+      window.hapticsManager.triggerTac();
+    });
+
+    bindBtn('victory-menu-btn', () => {
+      this.openStageSelectScreen();
       window.hapticsManager.triggerTac();
     });
 
@@ -171,6 +227,17 @@ class Game {
 
     bindBtn('banana-btn', () => {
       this.dropBananaTrap();
+    });
+
+    bindBtn('slipper-btn', () => {
+      this.throwSlipper();
+    });
+
+    // Keyboard 'F' listener for slipper throw
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'KeyF') {
+        this.throwSlipper();
+      }
     });
 
     const audioBtn = document.getElementById('audio-toggle-btn');
@@ -187,6 +254,40 @@ class Game {
     }
   }
 
+  openStageSelectScreen() {
+    this.state = 'STAGE_SELECT';
+    document.getElementById('start-screen').classList.add('hidden');
+    document.getElementById('victory-screen').classList.add('hidden');
+    document.getElementById('game-over-screen').classList.add('hidden');
+
+    const grid = document.getElementById('stage-cards-grid');
+    grid.innerHTML = '';
+
+    const stages = window.Entities.STORY_STAGES;
+    stages.forEach(stg => {
+      const card = document.createElement('div');
+      const isUnlocked = stg.id <= this.unlockedStage;
+
+      card.className = `stage-card ${isUnlocked ? 'unlocked' : 'locked'} ${stg.isBossFight ? 'boss-card' : ''}`;
+      
+      card.innerHTML = `
+        <div class="stage-num">${stg.isBossFight ? '👹 BOSS' : `المرحلة ${stg.id}`}</div>
+        <div class="stage-title">${stg.name.split(':')[1] || stg.name}</div>
+        <div class="stage-icon">${isUnlocked ? stg.icon : '🔒'}</div>
+      `;
+
+      if (isUnlocked) {
+        card.addEventListener('click', () => {
+          this.startStoryStage(stg.id);
+        });
+      }
+
+      grid.appendChild(card);
+    });
+
+    document.getElementById('stage-select-screen').classList.remove('hidden');
+  }
+
   dropBananaTrap() {
     if (this.state !== 'PLAYING' || !this.player) return;
     if (this.player.bananaTraps > 0) {
@@ -197,20 +298,37 @@ class Game {
     }
   }
 
+  throwSlipper() {
+    if (this.state !== 'PLAYING' || !this.player || !this.kenan || !this.kenan.isBoss) return;
+    
+    // Launch slipper towards Giant Kenan Boss
+    this.slippers.push(new window.Entities.SlipperProjectile(
+      this.player.x, this.player.y,
+      this.kenan.x, this.kenan.y
+    ));
+    
+    window.soundEffectsManager.playDashSound();
+    window.hapticsManager.triggerTac();
+  }
+
   updateHighScoreDisplay() {
     const hs = this.highScores[this.difficulty] || 0.0;
     document.getElementById('start-high-score-val').innerText = hs.toFixed(1);
   }
 
-  setupArena() {
+  setupBaseArena() {
     this.score = 0.0;
     this.rageTriggered = false;
     this.clonesTriggered = false;
     this.isNightMode = false;
+    this.weatherRain = false;
     this.clones = [];
     this.powerUps = [];
     this.bananaTraps = [];
     this.particles = [];
+    this.storyItems = [];
+    this.pushableCrates = [];
+    this.slippers = [];
     this.activePowerUp = null;
 
     this.powerUpSpawnTimer = 0;
@@ -218,63 +336,148 @@ class Game {
 
     document.getElementById('rage-banner').classList.add('hidden');
     document.getElementById('powerup-indicator').classList.add('hidden');
+    document.getElementById('hud-objective-banner').classList.add('hidden');
+    document.getElementById('boss-health-container').classList.add('hidden');
+    document.getElementById('slipper-btn').classList.add('hidden');
     const jumpscare = document.getElementById('jumpscare-overlay');
     if (jumpscare) jumpscare.classList.add('hidden');
 
-    // Spawn Player at Center of Enlarged 200% Map
+    // Spawn Player at Center
     this.player = new window.Entities.Player(this.arenaWidth / 2, this.arenaHeight / 2);
     document.getElementById('banana-count').innerText = this.player.bananaTraps;
 
     // Spawn Kenan
     this.kenan = new window.Entities.KenanMonster(150, 150, this.difficulty);
 
-    // Hard Mode Micro Jitter
+    // Hard Mode Jitter
     const container = document.getElementById('game-container');
-    if (this.difficulty === 'hard') container.classList.add('hard-jitter');
+    if (this.gameMode === 'ENDLESS' && this.difficulty === 'hard') container.classList.add('hard-jitter');
     else container.classList.remove('hard-jitter');
 
-    // 200% Expanded Map Obstacles (Distributed across 4 quadrants)
+    // Base Arena Obstacles & Speed Pads
     this.obstacles = [
-      new window.Entities.Obstacle(this.arenaWidth * 0.20, this.arenaHeight * 0.20, 50, 'طاولة ضخمة 1'),
-      new window.Entities.Obstacle(this.arenaWidth * 0.80, this.arenaHeight * 0.20, 50, 'طاولة ضخمة 2'),
+      new window.Entities.Obstacle(this.arenaWidth * 0.20, this.arenaHeight * 0.20, 50, 'طاولة 1'),
+      new window.Entities.Obstacle(this.arenaWidth * 0.80, this.arenaHeight * 0.20, 50, 'طاولة 2'),
       new window.Entities.Obstacle(this.arenaWidth * 0.50, this.arenaHeight * 0.35, 60, 'عمود ممر شمالي'),
       new window.Entities.Obstacle(this.arenaWidth * 0.50, this.arenaHeight * 0.65, 60, 'عمود ممر جنوبي'),
       new window.Entities.Obstacle(this.arenaWidth * 0.20, this.arenaHeight * 0.80, 45, 'حاجز خشب 1'),
-      new window.Entities.Obstacle(this.arenaWidth * 0.80, this.arenaHeight * 0.80, 45, 'حاجز خشب 2'),
-      new window.Entities.Obstacle(this.arenaWidth * 0.35, this.arenaHeight * 0.50, 50, 'طاولة وسط غريبة'),
-      new window.Entities.Obstacle(this.arenaWidth * 0.65, this.arenaHeight * 0.50, 50, 'طاولة وسط غريبة 2')
+      new window.Entities.Obstacle(this.arenaWidth * 0.80, this.arenaHeight * 0.80, 45, 'حاجز خشب 2')
     ];
 
-    // 200% Expanded Map Interactive Corridor Doors
     this.doors = [
-      new window.Entities.InteractiveDoor(this.arenaWidth * 0.35, this.arenaHeight * 0.30, 95, 26, 'باب الشمال الغربي'),
-      new window.Entities.InteractiveDoor(this.arenaWidth * 0.65, this.arenaHeight * 0.30, 95, 26, 'باب الشمال الشرقي'),
-      new window.Entities.InteractiveDoor(this.arenaWidth * 0.35, this.arenaHeight * 0.70, 95, 26, 'باب الجنوب الغربي'),
-      new window.Entities.InteractiveDoor(this.arenaWidth * 0.65, this.arenaHeight * 0.70, 95, 26, 'باب الجنوب الشرقي')
+      new window.Entities.InteractiveDoor(this.arenaWidth * 0.35, this.arenaHeight * 0.30, 95, 26, 'باب الشمال'),
+      new window.Entities.InteractiveDoor(this.arenaWidth * 0.65, this.arenaHeight * 0.70, 95, 26, 'باب الجنوب')
     ];
 
-    // 200% Expanded Map Speed Boost Pads
     this.speedPads = [
       new window.Entities.SpeedBoostPad(this.arenaWidth * 0.15, this.arenaHeight * 0.50),
       new window.Entities.SpeedBoostPad(this.arenaWidth * 0.85, this.arenaHeight * 0.50),
       new window.Entities.SpeedBoostPad(this.arenaWidth * 0.50, this.arenaHeight * 0.15),
-      new window.Entities.SpeedBoostPad(this.arenaWidth * 0.50, this.arenaHeight * 0.85),
-      new window.Entities.SpeedBoostPad(this.arenaWidth * 0.30, this.arenaHeight * 0.30),
-      new window.Entities.SpeedBoostPad(this.arenaWidth * 0.70, this.arenaHeight * 0.70)
+      new window.Entities.SpeedBoostPad(this.arenaWidth * 0.50, this.arenaHeight * 0.85)
     ];
   }
 
-  startGame() {
-    this.setupArena();
+  startEndlessGame() {
+    this.gameMode = 'ENDLESS';
+    this.setupBaseArena();
     this.state = 'PLAYING';
     this.lastTime = performance.now();
 
     document.getElementById('start-screen').classList.add('hidden');
+    document.getElementById('stage-select-screen').classList.add('hidden');
     document.getElementById('pause-screen').classList.add('hidden');
     document.getElementById('game-over-screen').classList.add('hidden');
     document.getElementById('hud-layer').classList.remove('hidden');
 
     window.audioManager.startChase();
+  }
+
+  startStoryStage(stageId) {
+    this.gameMode = 'STORY';
+    this.currentStageId = stageId;
+    this.setupBaseArena();
+
+    const stageData = window.Entities.STORY_STAGES.find(s => s.id === stageId);
+    if (!stageData) return;
+
+    this.stageItemsCollected = 0;
+    this.stageItemsTotal = stageData.itemsNeeded;
+
+    // Apply Specific Stage Mechanics & Objectives
+    this.isNightMode = !!stageData.isNightMode;
+    this.weatherRain = !!stageData.weatherRain;
+
+    if (stageData.permanentRage) {
+      this.rageTriggered = true;
+      this.kenan.setRageMode(true);
+    }
+
+    if (stageData.hasClones) {
+      this.clones.push(new window.Entities.KenanClone(this.arenaWidth * 0.3, this.arenaHeight * 0.3));
+      this.clones.push(new window.Entities.KenanClone(this.arenaWidth * 0.7, this.arenaHeight * 0.7));
+    }
+
+    // Stage 6 Basement Pushable Crates
+    if (stageData.pushableCrates) {
+      this.pushableCrates = [
+        new window.Entities.PushableCrate(this.arenaWidth * 0.40, this.arenaHeight * 0.40),
+        new window.Entities.PushableCrate(this.arenaWidth * 0.60, this.arenaHeight * 0.40),
+        new window.Entities.PushableCrate(this.arenaWidth * 0.50, this.arenaHeight * 0.60)
+      ];
+    }
+
+    // Spawn Collectible Story Items
+    if (stageData.itemsNeeded > 0) {
+      const positions = [
+        { x: this.arenaWidth * 0.25, y: this.arenaHeight * 0.25 },
+        { x: this.arenaWidth * 0.75, y: this.arenaHeight * 0.25 },
+        { x: this.arenaWidth * 0.25, y: this.arenaHeight * 0.75 },
+        { x: this.arenaWidth * 0.75, y: this.arenaHeight * 0.75 }
+      ];
+
+      for (let i = 0; i < stageData.itemsNeeded; i++) {
+        const pos = positions[i % positions.length];
+        this.storyItems.push(new window.Entities.StoryItem(
+          pos.x + (Math.random() - 0.5) * 100,
+          pos.y + (Math.random() - 0.5) * 100,
+          stageData.itemType,
+          stageData.icon
+        ));
+      }
+    }
+
+    // Stage 10 Giant Kenan Boss Fight!
+    if (stageData.isBossFight) {
+      this.kenan.setAsBoss(100);
+      document.getElementById('boss-health-container').classList.remove('hidden');
+      document.getElementById('slipper-btn').classList.remove('hidden');
+      this.updateBossHpBar();
+    }
+
+    // Show HUD Objective Banner
+    const objBanner = document.getElementById('hud-objective-banner');
+    document.getElementById('objective-text').innerText = stageData.objectiveText;
+    document.getElementById('objective-count-badge').innerText = stageData.itemsNeeded > 0 ? `0/${stageData.itemsNeeded}` : '⚔️';
+    objBanner.classList.remove('hidden');
+
+    this.state = 'PLAYING';
+    this.lastTime = performance.now();
+
+    document.getElementById('start-screen').classList.add('hidden');
+    document.getElementById('stage-select-screen').classList.add('hidden');
+    document.getElementById('pause-screen').classList.add('hidden');
+    document.getElementById('game-over-screen').classList.add('hidden');
+    document.getElementById('hud-layer').classList.remove('hidden');
+
+    window.audioManager.startChase();
+  }
+
+  updateBossHpBar() {
+    if (!this.kenan || !this.kenan.isBoss) return;
+    const hp = Math.max(0, this.kenan.bossHp);
+    const pct = (hp / this.kenan.maxBossHp) * 100;
+    document.getElementById('boss-health-bar-fill').style.width = `${pct}%`;
+    document.getElementById('boss-hp-text').innerText = `${hp} / ${this.kenan.maxBossHp} HP`;
   }
 
   pauseGame() {
@@ -298,6 +501,8 @@ class Game {
     document.getElementById('hud-layer').classList.add('hidden');
     document.getElementById('pause-screen').classList.add('hidden');
     document.getElementById('game-over-screen').classList.add('hidden');
+    document.getElementById('victory-screen').classList.add('hidden');
+    document.getElementById('stage-select-screen').classList.add('hidden');
     document.getElementById('start-screen').classList.remove('hidden');
     this.updateHighScoreDisplay();
   }
@@ -368,6 +573,45 @@ class Game {
     }, 1200);
   }
 
+  completeStoryStage() {
+    this.state = 'VICTORY';
+    window.audioManager.stopChase();
+    window.soundEffectsManager.playBossDeadSound();
+    window.hapticsManager.triggerImpact();
+
+    // Unlock next stage in localStorage
+    if (this.currentStageId >= this.unlockedStage && this.unlockedStage < 10) {
+      this.unlockedStage = this.currentStageId + 1;
+      localStorage.setItem('kenan_unlocked_stage', this.unlockedStage.toString());
+    }
+
+    const stageData = window.Entities.STORY_STAGES.find(s => s.id === this.currentStageId);
+    document.getElementById('victory-stage-name').innerText = stageData ? stageData.name : `المرحلة ${this.currentStageId}`;
+
+    const descEl = document.getElementById('victory-desc-text');
+    if (this.currentStageId === 10) {
+      descEl.innerText = '🎉 👑 تهانينا الحارة! هدمت كنان العملاق وختمت قصة الوحش كنان بنجاح 100%! 🏆';
+      document.getElementById('next-stage-btn').innerText = '🗺️ قائمة المراحل';
+    } else {
+      descEl.innerText = 'أحسنت! نجحت في حل اللغز واكتملت المرحلة بنجاح!';
+      document.getElementById('next-stage-btn').innerText = '⏩ المرحلة التالية';
+    }
+
+    // Fireworks particles
+    for (let i = 0; i < 40; i++) {
+      this.particles.push(new window.Entities.Particle(
+        this.player.x + (Math.random() - 0.5) * 300,
+        this.player.y + (Math.random() - 0.5) * 300,
+        (Math.random() - 0.5) * 300, (Math.random() - 0.5) * 300,
+        ['#00f0ff', '#ffcc00', '#00ff88', '#ff3366'][Math.floor(Math.random() * 4)],
+        8, 1.5
+      ));
+    }
+
+    document.getElementById('hud-layer').classList.add('hidden');
+    document.getElementById('victory-screen').classList.remove('hidden');
+  }
+
   spawnPowerUp() {
     const padding = 100;
     const x = padding + Math.random() * (this.arenaWidth - padding * 2);
@@ -386,13 +630,13 @@ class Game {
     this.score += dt;
     document.getElementById('hud-timer').innerText = `${this.score.toFixed(1)}s`;
 
-    // Timeline Event 30s: Rage Mode
-    if (this.score >= 30.0 && !this.rageTriggered) {
+    // Timeline Event 30s: Rage Mode (Endless Mode)
+    if (this.gameMode === 'ENDLESS' && this.score >= 30.0 && !this.rageTriggered) {
       this.rageTriggered = true;
       this.kenan.setRageMode(true);
       if (this.kenan) {
         this.kenan.currentQuote = "خلاص عصّبت!";
-        this.kenan.memeTimer = -3.0; // Keep bubble visible
+        this.kenan.memeTimer = -3.0;
       }
       window.audioManager.playVoice('voice_assabt');
       document.getElementById('rage-banner').classList.remove('hidden');
@@ -409,14 +653,14 @@ class Game {
       }
     }
 
-    // Timeline Event 40s: Night Mode
-    if (this.score >= 40.0 && !this.isNightMode) {
+    // Timeline Event 40s: Night Mode (Endless Mode)
+    if (this.gameMode === 'ENDLESS' && this.score >= 40.0 && !this.isNightMode) {
       this.isNightMode = true;
       window.hapticsManager.triggerTac();
     }
 
-    // Timeline Event 45s: Kenan Clones
-    if (this.score >= 45.0 && !this.clonesTriggered) {
+    // Timeline Event 45s: Kenan Clones (Endless Mode)
+    if (this.gameMode === 'ENDLESS' && this.score >= 45.0 && !this.clonesTriggered) {
       this.clonesTriggered = true;
       this.clones.push(new window.Entities.KenanClone(this.arenaWidth * 0.3, this.arenaHeight * 0.3));
       this.clones.push(new window.Entities.KenanClone(this.arenaWidth * 0.7, this.arenaHeight * 0.7));
@@ -435,6 +679,81 @@ class Game {
     const inputVector = window.joystickController.getVector();
     this.player.update(dt, inputVector, this.arenaWidth, this.arenaHeight, this.obstacles, this.doors);
     this.kenan.update(dt, this.player.x, this.player.y, this.arenaWidth, this.arenaHeight, this.obstacles, this.doors, this.particles);
+
+    // Pushable Crates Physics (Stage 6)
+    this.pushableCrates.forEach(crate => {
+      const dist = Math.hypot(this.player.x - crate.x, this.player.y - crate.y);
+      if (dist < (this.player.radius + crate.radius)) {
+        crate.push(inputVector.x * dt, inputVector.y * dt, this.obstacles, this.arenaWidth, this.arenaHeight);
+      }
+    });
+
+    // Story Collectible Items Update & Collision
+    this.storyItems.forEach(item => {
+      if (item.isCollected) return;
+      item.update(dt);
+
+      const dist = Math.hypot(this.player.x - item.x, this.player.y - item.y);
+      if (dist < (this.player.radius + item.radius)) {
+        item.isCollected = true;
+        this.stageItemsCollected++;
+        window.soundEffectsManager.playDashSound();
+        window.hapticsManager.triggerTac();
+
+        document.getElementById('objective-count-badge').innerText = `${this.stageItemsCollected}/${this.stageItemsTotal}`;
+
+        // Create item collect particle burst
+        for (let i = 0; i < 10; i++) {
+          this.particles.push(new window.Entities.Particle(
+            item.x, item.y, (Math.random() - 0.5) * 150, (Math.random() - 0.5) * 150,
+            '#00f0ff', 6, 0.4
+          ));
+        }
+
+        // Check if all stage items collected!
+        if (this.stageItemsCollected >= this.stageItemsTotal) {
+          this.completeStoryStage();
+          return;
+        }
+      }
+    });
+
+    // Slipper Projectiles Update & Collision (Stage 10 Boss Fight)
+    this.slippers.forEach((slp, sIdx) => {
+      slp.update(dt);
+      if (this.kenan && this.kenan.isBoss) {
+        const dist = Math.hypot(slp.x - this.kenan.x, slp.y - this.kenan.y);
+        if (dist < (slp.radius + this.kenan.radius)) {
+          // Hit Giant Kenan Boss!
+          this.kenan.bossHp -= 10;
+          this.updateBossHpBar();
+          window.soundEffectsManager.playBossHitSound();
+          window.hapticsManager.triggerImpact();
+
+          // Particle burst
+          for (let i = 0; i < 12; i++) {
+            this.particles.push(new window.Entities.Particle(
+              slp.x, slp.y, (Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200,
+              '#ffcc00', 8, 0.4
+            ));
+          }
+
+          // Screen shake
+          const container = document.getElementById('game-container');
+          container.classList.add('shake-screen');
+          setTimeout(() => container.classList.remove('shake-screen'), 300);
+
+          this.slippers.splice(sIdx, 1);
+
+          // Check if Boss Defeated!
+          if (this.kenan.bossHp <= 0) {
+            this.completeStoryStage();
+            return;
+          }
+        }
+      }
+    });
+    this.slippers = this.slippers.filter(s => s.lifespan > 0);
 
     this.clones.forEach(c => c.update(dt, this.arenaWidth, this.arenaHeight, this.obstacles));
     this.powerUps.forEach(pu => pu.update(dt));
@@ -555,7 +874,10 @@ class Game {
     this.speedPads.forEach(sp => sp.draw(this.ctx));
     this.doors.forEach(d => d.draw(this.ctx));
     this.obstacles.forEach(obs => obs.draw(this.ctx));
+    this.pushableCrates.forEach(cr => cr.draw(this.ctx));
     this.bananaTraps.forEach(bt => bt.draw(this.ctx));
+    this.storyItems.forEach(item => item.draw(this.ctx));
+    this.slippers.forEach(slp => slp.draw(this.ctx));
     this.powerUps.forEach(pu => pu.draw(this.ctx));
     this.particles.forEach(p => p.draw(this.ctx));
     this.clones.forEach(clone => clone.draw(this.ctx));
@@ -571,6 +893,10 @@ class Game {
       this.drawNightDarknessOverlay();
     }
 
+    if (this.weatherRain) {
+      this.drawRainOverlay();
+    }
+
     this.ctx.restore();
 
     this.renderMinimap();
@@ -580,6 +906,21 @@ class Game {
     this.ctx.save();
     this.ctx.fillStyle = 'rgba(5, 3, 14, 0.88)';
     this.ctx.fillRect(0, 0, this.arenaWidth, this.arenaHeight);
+    this.ctx.restore();
+  }
+
+  drawRainOverlay() {
+    this.ctx.save();
+    this.ctx.strokeStyle = 'rgba(180, 220, 255, 0.35)';
+    this.ctx.lineWidth = 1.5;
+    for (let i = 0; i < 40; i++) {
+      const rx = (this.camera.x + Math.random() * this.width);
+      const ry = (this.camera.y + Math.random() * this.height);
+      this.ctx.beginPath();
+      this.ctx.moveTo(rx, ry);
+      this.ctx.lineTo(rx - 8, ry + 22);
+      this.ctx.stroke();
+    }
     this.ctx.restore();
   }
 
@@ -626,6 +967,14 @@ class Game {
       mctx.fill();
     });
 
+    mctx.fillStyle = '#00f0ff';
+    this.storyItems.forEach(item => {
+      if (item.isCollected) return;
+      mctx.beginPath();
+      mctx.arc(item.x * scaleX, item.y * scaleY, 2.5, 0, Math.PI * 2);
+      mctx.fill();
+    });
+
     if (this.player) {
       mctx.fillStyle = '#00ff88';
       mctx.beginPath();
@@ -636,7 +985,7 @@ class Game {
     if (this.kenan) {
       mctx.fillStyle = '#ff0044';
       mctx.beginPath();
-      mctx.arc(this.kenan.x * scaleX, this.kenan.y * scaleY, 4.5, 0, Math.PI * 2);
+      mctx.arc(this.kenan.x * scaleX, this.kenan.y * scaleY, this.kenan.isBoss ? 7 : 4.5, 0, Math.PI * 2);
       mctx.fill();
     }
 

@@ -288,6 +288,15 @@ class KenanMonster {
     this.isRage = active;
   }
 
+  setAsBoss(hp = 100) {
+    this.isBoss = true;
+    this.radius = 95; // Giant Kenan (+250% scale!)
+    this.bossHp = hp;
+    this.maxBossHp = hp;
+    this.baseSpeed = 220;
+    this.turnRate = 0.09;
+  }
+
   freeze(duration = 1.5) {
     this.freezeTimer = duration;
   }
@@ -827,6 +836,279 @@ class PowerUp {
 
     ctx.restore();
   }
+/**
+ * Story Mode Stages Data
+ */
+const STORY_STAGES = [
+  {
+    id: 1,
+    name: "المرحلة 1: الصالة",
+    themeColor: "#ff9900",
+    objectiveText: "🎯 المهمة: ابحث عن المفتاح (🔑) وافتح الباب للهروب!",
+    itemsNeeded: 1,
+    itemType: "key",
+    icon: "🔑",
+    itemLabel: "مفتاح البوابة",
+    desc: "أول مرحلة في المنزل، ابحث عن المفتاح للهروب من الصالة!"
+  },
+  {
+    id: 2,
+    name: "المرحلة 2: المطبخ",
+    themeColor: "#ffaa00",
+    slipperyFloor: true,
+    objectiveText: "🎯 المهمة: اجمع 3 علب عصير (🧃) واهرب من المطبخ المبلل!",
+    itemsNeeded: 3,
+    itemType: "juice",
+    icon: "🧃",
+    itemLabel: "علب عصير",
+    desc: "الأرضية مبللة وتزلق! اجمع 3 علب عصير لتفتح المخرج."
+  },
+  {
+    id: 3,
+    name: "المرحلة 3: غرفة النوم",
+    themeColor: "#9900ff",
+    isNightMode: true,
+    objectiveText: "🎯 المهمة: شغل 3 مفاتيح إضاءة (🔘) بالكشاف!",
+    itemsNeeded: 3,
+    itemType: "switch",
+    icon: "🔘",
+    itemLabel: "مفاتيح الإضاءة",
+    desc: "الغرفة مظلمة بالكامل! استخدم الكشاف لتشغيل مفاتيح الإضاءة."
+  },
+  {
+    id: 4,
+    name: "المرحلة 4: الممر",
+    themeColor: "#00ccff",
+    hasCorridorDoors: true,
+    objectiveText: "🎯 المهمة: أغلق الأبواب لتعطيل كنان واجمع بطاقة المرور (💳)!",
+    itemsNeeded: 1,
+    itemType: "keycard",
+    icon: "💳",
+    itemLabel: "بطاقة المرور",
+    desc: "استخدم الأبواب التفاعلية لإعاقة كنان واهرب من الممر."
+  },
+  {
+    id: 5,
+    name: "المرحلة 5: الحوش",
+    themeColor: "#00ff88",
+    hasSpeedPads: true,
+    objectiveText: "🎯 المهمة: قف على 3 رشاشات ماء (💦) لإغراق كنان!",
+    itemsNeeded: 3,
+    itemType: "sprinkler",
+    icon: "💦",
+    itemLabel: "رشاشات الماء",
+    desc: "استغل سجادات السرعة وقف على رشاشات الماء لإغراق كنان."
+  },
+  {
+    id: 6,
+    name: "المرحلة 6: القبو",
+    themeColor: "#885522",
+    pushableCrates: true,
+    objectiveText: "🎯 المهمة: ادفع الصناديق الخشبية (📦) لسد الطريق واجمع المولد (🔋)!",
+    itemsNeeded: 1,
+    itemType: "generator",
+    icon: "🔋",
+    itemLabel: "بطارية المولد",
+    desc: "يمكنك دفع الصناديق الخشبية لسد الممرات أمام كنان!"
+  },
+  {
+    id: 7,
+    name: "المرحلة 7: السطح",
+    themeColor: "#5588ff",
+    weatherRain: true,
+    objectiveText: "🎯 المهمة: اجمع سلكين (🔌) لإصلاح المصعد في المطر!",
+    itemsNeeded: 2,
+    itemType: "wire",
+    icon: "🔌",
+    itemLabel: "أسلاك الكهرباء",
+    desc: "أجواء ممطرة وضبابية! اجمع سلكين لإصلاح المصعد والهروب."
+  },
+  {
+    id: 8,
+    name: "المرحلة 8: المجلس",
+    themeColor: "#ff0044",
+    permanentRage: true,
+    objectiveText: "🎯 المهمة: اجمع 4 قطع حلوى (🍬) وكنان في وضع الغضب الدائم!",
+    itemsNeeded: 4,
+    itemType: "candy",
+    icon: "🍬",
+    itemLabel: "قطع الحلوى",
+    desc: "كنان معصب جداً بوضع الغضب! اجمع 4 قطع حلوى بسرعة."
+  },
+  {
+    id: 9,
+    name: "المرحلة 9: عالم الميمز",
+    themeColor: "#aa00ff",
+    hasClones: true,
+    objectiveText: "🎯 المهمة: دمر 3 بلورات ميمز (🔮) بين النسخ الوهمية!",
+    itemsNeeded: 3,
+    itemType: "crystal",
+    icon: "🔮",
+    itemLabel: "بلورات الميمز",
+    desc: "عالم الميمز المليء بالنسخ الوهمية! دهس ودمر 3 بلورات نادرة."
+  },
+  {
+    id: 10,
+    name: "المرحلة 10: قتال البوس الأخير",
+    themeColor: "#ff0000",
+    isBossFight: true,
+    bossHp: 100,
+    objectiveText: "⚔️ قتال البوس: ارمي النعال (👡) على كنان العملاق ودمّره!",
+    itemsNeeded: 0,
+    itemType: "slipper",
+    icon: "👡",
+    itemLabel: "النعال الطائرة",
+    desc: "المواجهة الحاسمة! كنان العملاق (+250%). ارمي النعال واهزمه!"
+  }
+];
+
+/**
+ * Story Collectible Item
+ */
+class StoryItem {
+  constructor(x, y, type, icon) {
+    this.x = x;
+    this.y = y;
+    this.radius = 22;
+    this.type = type;
+    this.icon = icon || '⭐';
+    this.isCollected = false;
+    this.animTimer = Math.random() * Math.PI * 2;
+  }
+
+  update(dt) {
+    this.animTimer += dt * 3.5;
+  }
+
+  draw(ctx) {
+    if (this.isCollected) return;
+
+    ctx.save();
+    ctx.translate(this.x, this.y);
+
+    const floatOffset = Math.sin(this.animTimer) * 6;
+    ctx.translate(0, floatOffset);
+
+    // Glowing Aura
+    ctx.shadowColor = '#00f0ff';
+    ctx.shadowBlur = 18;
+
+    ctx.fillStyle = 'rgba(0, 240, 255, 0.25)';
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius + 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#1b1638';
+    ctx.strokeStyle = '#00f0ff';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.shadowBlur = 0;
+    ctx.font = '20px Cairo, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(this.icon, 0, 1);
+
+    ctx.restore();
+  }
+}
+
+/**
+ * Pushable Wooden Crate for Stage 6 Basement
+ */
+class PushableCrate {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.radius = 28;
+    this.width = 56;
+    this.height = 56;
+  }
+
+  push(dx, dy, obstacles, arenaWidth, arenaHeight) {
+    const pushSpeed = 160;
+    let nextX = this.x + dx * pushSpeed;
+    let nextY = this.y + dy * pushSpeed;
+
+    nextX = Math.min(Math.max(nextX, this.radius), arenaWidth - this.radius);
+    nextY = Math.min(Math.max(nextY, this.radius), arenaHeight - this.radius);
+
+    this.x = nextX;
+    this.y = nextY;
+  }
+
+  draw(ctx) {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetY = 6;
+
+    ctx.fillStyle = '#a06028';
+    ctx.strokeStyle = '#5a3410';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.roundRect(-this.width / 2, -this.height / 2, this.width, this.height, 8);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#6d4019';
+    ctx.beginPath();
+    ctx.moveTo(-this.width / 2 + 6, -this.height / 2 + 6);
+    ctx.lineTo(this.width / 2 - 6, this.height / 2 - 6);
+    ctx.moveTo(this.width / 2 - 6, -this.height / 2 + 6);
+    ctx.lineTo(-this.width / 2 + 6, this.height / 2 - 6);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+}
+
+/**
+ * Slipper Projectile for Stage 10 Boss Fight
+ */
+class SlipperProjectile {
+  constructor(x, y, targetX, targetY) {
+    this.x = x;
+    this.y = y;
+    this.radius = 16;
+    this.speed = 650;
+    this.lifespan = 2.5;
+
+    const angle = Math.atan2(targetY - y, targetX - x);
+    this.vx = Math.cos(angle) * this.speed;
+    this.vy = Math.sin(angle) * this.speed;
+    this.angle = angle;
+  }
+
+  update(dt) {
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.angle += dt * 15; // Spinning flying slipper!
+    this.lifespan -= dt;
+  }
+
+  draw(ctx) {
+    if (this.lifespan <= 0) return;
+
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle);
+
+    ctx.shadowColor = '#ffcc00';
+    ctx.shadowBlur = 15;
+
+    ctx.font = '28px Cairo, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('👡', 0, 0);
+
+    ctx.restore();
+  }
 }
 
 window.Entities = {
@@ -839,5 +1121,10 @@ window.Entities = {
   InteractiveDoor,
   Obstacle,
   PowerUp,
+  StoryItem,
+  PushableCrate,
+  SlipperProjectile,
+  STORY_STAGES,
   LOSS_QUOTES
 };
+

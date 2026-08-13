@@ -1,11 +1,13 @@
 /**
  * Sound Effects & Voice Synthesizer for Monster Kenan Expansion
- * Handles Panic Screams, Dash, Banana Slip, Teleport Warp, and Door Splinter SFX
+ * Handles Panic Screams, Dash, Banana Slip, Teleport Warp, Door Break, and Boss Hit/Death SFX
  */
 class SoundEffectsManager {
   constructor() {
     this.audioCtx = null;
     this.lastPanicTime = 0;
+    this.hitAudio = null;
+    this.deadAudio = null;
     this.init();
   }
 
@@ -15,6 +17,12 @@ class SoundEffectsManager {
       if (AudioContext) {
         this.audioCtx = new AudioContext();
       }
+
+      this.hitAudio = new Audio('./kenan_hit.mp3');
+      this.hitAudio.preload = 'auto';
+
+      this.deadAudio = new Audio('./kenan_dead.mp3');
+      this.deadAudio.preload = 'auto';
     } catch (e) {}
   }
 
@@ -36,7 +44,6 @@ class SoundEffectsManager {
       const osc = this.audioCtx.createOscillator();
       const gain = this.audioCtx.createGain();
 
-      // Pitch sweep mimicking funny comic panic "Yikes / Yaaah!"
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(450, this.audioCtx.currentTime);
       osc.frequency.linearRampToValueAtTime(750, this.audioCtx.currentTime + 0.15);
@@ -142,6 +149,70 @@ class SoundEffectsManager {
 
       osc.start();
       osc.stop(this.audioCtx.currentTime + 0.3);
+    } catch (e) {}
+  }
+
+  // Giant Kenan Boss Hit SFX (kenan_hit.mp3 or synth fallback)
+  playBossHitSound() {
+    this.unlock();
+    if (this.hitAudio) {
+      this.hitAudio.currentTime = 0;
+      this.hitAudio.play().catch(() => this.playSynthBossHit());
+    } else {
+      this.playSynthBossHit();
+    }
+  }
+
+  playSynthBossHit() {
+    if (!this.audioCtx) return;
+    try {
+      const osc = this.audioCtx.createOscillator();
+      const gain = this.audioCtx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(400, this.audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(80, this.audioCtx.currentTime + 0.25);
+
+      gain.gain.setValueAtTime(0.6, this.audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.25);
+
+      osc.connect(gain);
+      gain.connect(this.audioCtx.destination);
+
+      osc.start();
+      osc.stop(this.audioCtx.currentTime + 0.25);
+    } catch (e) {}
+  }
+
+  // Giant Kenan Boss Death SFX (kenan_dead.mp3 or synth fallback)
+  playBossDeadSound() {
+    this.unlock();
+    if (this.deadAudio) {
+      this.deadAudio.currentTime = 0;
+      this.deadAudio.play().catch(() => this.playSynthBossDead());
+    } else {
+      this.playSynthBossDead();
+    }
+  }
+
+  playSynthBossDead() {
+    if (!this.audioCtx) return;
+    try {
+      const osc = this.audioCtx.createOscillator();
+      const gain = this.audioCtx.createGain();
+
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(150, this.audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(30, this.audioCtx.currentTime + 1.2);
+
+      gain.gain.setValueAtTime(0.8, this.audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 1.2);
+
+      osc.connect(gain);
+      gain.connect(this.audioCtx.destination);
+
+      osc.start();
+      osc.stop(this.audioCtx.currentTime + 1.2);
     } catch (e) {}
   }
 }

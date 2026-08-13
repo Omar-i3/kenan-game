@@ -34,7 +34,7 @@
     <!-- Orientation Rotate Device Prompt Overlay -->
     <div id="orientation-overlay" class="screen-overlay hidden" style="z-index: 30;">
       <div class="glass-panel">
-        <h2 class="game-title" style="font-size: 2rem;">📱 تدوير الهاتف</h2>
+        <h2 class="game-title" style="font-size: 1.8rem;">📱 تدوير الهاتف</h2>
         <p class="game-subtitle">يرجى تدوير الهاتف للوضع الأفقي (Landscape) للعب!</p>
       </div>
     </div>
@@ -56,6 +56,21 @@
         <button id="pause-btn" class="hud-btn" aria-label="توقف مؤقت">⏸️</button>
       </div>
 
+      <!-- Top Story Objective Banner -->
+      <div id="hud-objective-banner" class="hud-objective-banner hidden">
+        <span id="objective-text">🎯 المهمة: ابحث عن المفتاح وافتح الباب!</span>
+        <span id="objective-count-badge" class="count-badge">0/1</span>
+      </div>
+
+      <!-- Stage 10 Boss Health Bar Container -->
+      <div id="boss-health-container" class="boss-health-container hidden">
+        <div class="boss-name-label">👹 كنان العملاق (Giant Kenan Boss)</div>
+        <div class="boss-health-bar-bg">
+          <div id="boss-health-bar-fill" class="boss-health-bar-fill" style="width: 100%;"></div>
+        </div>
+        <div id="boss-hp-text" class="boss-hp-text">100 / 100 HP</div>
+      </div>
+
       <!-- Minimap (رادار كنان) -->
       <div id="minimap-container">
         <canvas id="minimapCanvas"></canvas>
@@ -63,11 +78,14 @@
 
       <!-- Desktop Keyboard Controls Hint Banner (Auto-hidden on mobile/touch) -->
       <div id="desktop-controls-hint" class="desktop-hint-banner">
-        <span>🎮 التحكم بالحاسوب: <b>WASD/الأسهم</b> للحركة | <b>Space</b> للاندفاع 💨 | <b>E</b> لرمي الموز 🍌</span>
+        <span>🎮 التحكم بالحاسوب: <b>WASD/الأسهم</b> للحركة | <b>Space</b> للاندفاع 💨 | <b>E</b> للموز 🍌 | <b>F</b> لرمي النعال 👡</span>
       </div>
 
-      <!-- Action Skill Buttons (Dash & Banana Trap for Mobile/Tablet) -->
+      <!-- Action Skill Buttons (Dash, Banana & Slipper Throw for Mobile/Tablet) -->
       <div id="action-buttons-group" class="action-buttons-group">
+        <button id="slipper-btn" class="skill-btn slipper-btn hidden" title="رمي النعال (F / 👡)">
+          <span>👡</span>
+        </button>
         <button id="dash-btn" class="skill-btn" title="اندفاع خاطف (Space / 💨)">
           <span>💨</span>
           <div id="dash-cooldown" class="cooldown-overlay hidden">8s</div>
@@ -96,41 +114,77 @@
     <div id="start-screen" class="screen-overlay">
       <div class="glass-panel">
         <h1 class="game-title">الوحش كنان</h1>
-        <p class="game-subtitle">اهرب من كنان واصمد لأطول فترة ممكنة!</p>
+        <p class="game-subtitle">اختر طور اللعب واهرب من غضب كنان!</p>
 
-        <div id="start-high-score" class="high-score-badge">
-          👑 الرقم القياسي: <span id="start-high-score-val">0.0</span> ثانية
-        </div>
-
-        <div class="section-label">اختر مستوى الصعوبة:</div>
-        <div class="difficulty-group">
-          <button class="diff-btn active" data-diff="easy">
-            <span>😴 كنان النعسان (سهل)</span>
-            <span class="diff-desc">حركة بطيئة واستجابة متأخرة</span>
+        <!-- Mode Select Buttons -->
+        <div class="mode-select-group">
+          <button id="mode-endless-btn" class="mode-btn active">
+            <span>🏃 طور الصمود (Endless)</span>
           </button>
-          <button class="diff-btn" data-diff="normal">
-            <span>🏃 كنان الطبيعي (متوسط)</span>
-            <span class="diff-desc">تحدي قياسي ومتوازن</span>
-          </button>
-          <button class="diff-btn" data-diff="hard">
-            <span>😡 كنان المعصب (صعب)</span>
-            <span class="diff-desc">سرعة عالية جداً وارتجاف بصري</span>
+          <button id="mode-story-btn" class="mode-btn">
+            <span>📖 طور القصة (10 مراحل)</span>
           </button>
         </div>
 
-        <button id="start-btn" class="btn-primary">🎮 ابدأ اللعب</button>
-        <button id="audio-toggle-btn" class="btn-secondary">🔊 الصوت: مفعّل</button>
+        <!-- Endless Mode Options -->
+        <div id="endless-options-box">
+          <div id="start-high-score" class="high-score-badge">
+            👑 الرقم القياسي: <span id="start-high-score-val">0.0</span> ثانية
+          </div>
+
+          <div class="section-label">اختر مستوى الصعوبة:</div>
+          <div class="difficulty-group">
+            <button class="diff-btn active" data-diff="easy">
+              <span>😴 كنان النعسان (سهل)</span>
+              <span class="diff-desc">حركة بطيئة واستجابة متأخرة</span>
+            </button>
+            <button class="diff-btn" data-diff="normal">
+              <span>🏃 كنان الطبيعي (متوسط)</span>
+              <span class="diff-desc">تحدي قياسي ومتوازن</span>
+            </button>
+            <button class="diff-btn" data-diff="hard">
+              <span>😡 كنان المعصب (صعب)</span>
+              <span class="diff-desc">سرعة عالية جداً وارتجاف بصري</span>
+            </button>
+          </div>
+
+          <button id="start-btn" class="btn-primary">🎮 ابدأ طور الصمود</button>
+        </div>
+
+        <!-- Story Mode Options -->
+        <div id="story-options-box" class="hidden">
+          <p class="story-mode-desc">انطلق في 10 مراحل حماسية، حُل الألغاز واهزم كنان العملاق في قتال البوس الأخير!</p>
+          <button id="open-story-stages-btn" class="btn-primary" style="background: linear-gradient(135deg, #00f0ff 0%, #0088cc 100%);">
+            🗺️ اختيار المراحل (1-10)
+          </button>
+        </div>
+
+        <button id="audio-toggle-btn" class="btn-secondary" style="margin-top: 10px;">🔊 الصوت: مفعّل</button>
+      </div>
+    </div>
+
+    <!-- Stage Select Screen Modal Overlay -->
+    <div id="stage-select-screen" class="screen-overlay hidden">
+      <div class="glass-panel story-stages-panel">
+        <h2 class="game-title" style="font-size: 1.8rem; color: var(--accent-cyan);">📖 طور القصة - اختيار المراحل</h2>
+        <p class="game-subtitle" style="margin-bottom: 10px;">أكمل المهمة في كل مرحلة لفتح المرحلة التالية!</p>
+
+        <div id="stage-cards-grid" class="stage-cards-grid">
+          <!-- Dynamically populated 10 Stage Cards -->
+        </div>
+
+        <button id="close-stages-btn" class="btn-secondary" style="margin-top: 12px;">🔙 العودة للقائمة الرئيسية</button>
       </div>
     </div>
 
     <!-- Pause Screen Overlay -->
     <div id="pause-screen" class="screen-overlay hidden">
       <div class="glass-panel">
-        <h2 class="game-title" style="font-size: 2rem;">توقف مؤقت ⏸️</h2>
+        <h2 class="game-title" style="font-size: 1.8rem;">توقف مؤقت ⏸️</h2>
         <p class="game-subtitle">خذ نفسك قبل لا يصيدك كنان!</p>
 
-        <button id="resume-btn" class="btn-primary" style="margin-top: 15px;">▶️ استئناف اللعب</button>
-        <button id="pause-main-menu-btn" class="btn-secondary" style="margin-top: 10px;">🏠 القائمة الرئيسية</button>
+        <button id="resume-btn" class="btn-primary" style="margin-top: 12px;">▶️ استئناف اللعب</button>
+        <button id="pause-main-menu-btn" class="btn-secondary" style="margin-top: 8px;">🏠 القائمة الرئيسية</button>
       </div>
     </div>
 
@@ -164,8 +218,30 @@
           </div>
         </div>
 
-        <button id="restart-btn" class="btn-primary">🔄 إعادة اللعب</button>
+        <button id="restart-btn" class="btn-primary">🔄 إعادة المحاولة</button>
         <button id="main-menu-btn" class="btn-secondary">🏠 القائمة الرئيسية</button>
+      </div>
+    </div>
+
+    <!-- Victory Screen Modal Overlay -->
+    <div id="victory-screen" class="screen-overlay hidden">
+      <div class="glass-panel">
+        <h2 class="game-title" style="color: var(--accent-green); text-shadow: 0 0 15px rgba(0, 255, 136, 0.7);">
+          🏆 اكتملت المرحلة بنجاح! 🎉
+        </h2>
+
+        <div id="victory-stage-name" class="title-badge-card" style="border-color: var(--accent-green); color: var(--accent-green);">
+          المرحلة 1: الصالة
+        </div>
+
+        <p id="victory-desc-text" class="game-subtitle" style="margin: 10px 0;">
+          أحسنت! نجحت في حل اللغز والهروب من كنان!
+        </p>
+
+        <button id="next-stage-btn" class="btn-primary" style="background: linear-gradient(135deg, #00ff88 0%, #00b359 100%); margin-top: 10px;">
+          ⏩ المرحلة التالية
+        </button>
+        <button id="victory-menu-btn" class="btn-secondary" style="margin-top: 8px;">🏠 اختيار المراحل</button>
       </div>
     </div>
 
