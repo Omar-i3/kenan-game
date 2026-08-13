@@ -1148,16 +1148,40 @@ class ExitGate {
  * Collectible Slipper Entity 👡 (Ground Pickups)
  */
 class CollectibleSlipper {
-  constructor(x, y) {
+  constructor(x, y, isMoving = true) {
     this.x = x;
     this.y = y;
     this.radius = 22;
     this.isCollected = false;
     this.animTimer = Math.random() * Math.PI * 2;
+    this.isMoving = isMoving;
+
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 70 + Math.random() * 60; // Gentle moving slipper
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed;
   }
 
-  update(dt) {
+  update(dt, arenaWidth = 9000, arenaHeight = 6400) {
     this.animTimer += dt * 3.5;
+
+    if (this.isMoving && !this.isCollected) {
+      let nextX = this.x + this.vx * dt;
+      let nextY = this.y + this.vy * dt;
+
+      // Bounce off map boundaries
+      if (nextX < this.radius + 60 || nextX > arenaWidth - this.radius - 60) {
+        this.vx = -this.vx;
+        nextX = Math.min(Math.max(nextX, this.radius + 60), arenaWidth - this.radius - 60);
+      }
+      if (nextY < this.radius + 60 || nextY > arenaHeight - this.radius - 60) {
+        this.vy = -this.vy;
+        nextY = Math.min(Math.max(nextY, this.radius + 60), arenaHeight - this.radius - 60);
+      }
+
+      this.x = nextX;
+      this.y = nextY;
+    }
   }
 
   draw(ctx) {

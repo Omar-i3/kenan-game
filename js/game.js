@@ -90,9 +90,9 @@ class Game {
       this.minimapCanvas.style.height = '80px';
       this.minimapCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      // Expanded Massive Map Arena (4500 x 3200)
-      this.arenaWidth = 4500;
-      this.arenaHeight = 3200;
+      // Expanded Massive Map Arena (200% scale: 9000 x 6400)
+      this.arenaWidth = 9000;
+      this.arenaHeight = 6400;
     };
     window.addEventListener('resize', resize);
     window.addEventListener('orientationchange', () => setTimeout(resize, 200));
@@ -135,14 +135,20 @@ class Game {
 
       let lastTime = 0;
       const fn = (e) => {
+        if (e && e.cancelable && e.type === 'touchstart') {
+          e.preventDefault();
+        }
+        if (e && e.stopPropagation) e.stopPropagation();
+
         const now = Date.now();
-        if (now - lastTime < 250) return;
+        if (now - lastTime < 180) return;
         lastTime = now;
         if (window.audioManager) window.audioManager.unlockAudio();
         if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
         handler(e);
       };
 
+      el.addEventListener('touchstart', fn, { passive: false });
       el.onpointerdown = fn;
       el.onclick = fn;
     };
@@ -362,6 +368,9 @@ class Game {
     if (this.kenan && this.kenan.isBoss) {
       slipperBtn.classList.remove('hidden');
       badge.innerText = '∞';
+    } else if (this.gameMode === 'ENDLESS' || (this.player && this.player.slippers > 0)) {
+      slipperBtn.classList.remove('hidden');
+      badge.innerText = this.player ? this.player.slippers : 0;
     } else if (this.player && this.player.slippers > 0) {
       slipperBtn.classList.remove('hidden');
       badge.innerText = this.player.slippers;
@@ -391,6 +400,10 @@ class Game {
     this.slippers = [];
     this.activePowerUp = null;
 
+    // Slipper Spawn State for Endless Survival Mode
+    this.slipperSpawnTriggered = false;
+    this.slipperSpawnTimer = 0;
+
     this.powerUpSpawnTimer = 0;
     this.nextPowerUpDelay = 10 + Math.random() * 5;
 
@@ -398,23 +411,27 @@ class Game {
     document.getElementById('powerup-indicator').classList.add('hidden');
     document.getElementById('hud-objective-banner').classList.add('hidden');
     document.getElementById('boss-health-container').classList.add('hidden');
-    document.getElementById('slipper-btn').classList.add('hidden');
+    
+    const slipperAlert = document.getElementById('slipper-alert-banner');
+    if (slipperAlert) slipperAlert.classList.add('hidden');
 
     const jumpscare = document.getElementById('jumpscare-overlay');
     if (jumpscare) jumpscare.classList.add('hidden');
 
-    // Spawn Player at Center of 4500x3200 Arena
+    // Spawn Player at Center of 9000x6400 Arena
     this.player = new window.Entities.Player(this.arenaWidth / 2, this.arenaHeight / 2);
     document.getElementById('banana-count').innerText = this.player.bananaTraps;
 
-    // Exit Gate Portal Position (Far Corner)
-    this.exitGate = new window.Entities.ExitGate(this.arenaWidth - 280, this.arenaHeight - 280);
+    this.updateSlipperHudBadge();
 
-    // Spawn Kenan Pursuer near player (450px) so Kenan is immediately visible on screen!
+    // Exit Gate Portal Position (Far Corner)
+    this.exitGate = new window.Entities.ExitGate(this.arenaWidth - 380, this.arenaHeight - 380);
+
+    // Spawn Kenan Pursuer near player (550px) so Kenan is immediately visible on screen!
     const spawnAngle = Math.random() * Math.PI * 2;
-    const spawnDist = 450;
-    const kenanSpawnX = Math.min(Math.max(this.player.x + Math.cos(spawnAngle) * spawnDist, 150), this.arenaWidth - 150);
-    const kenanSpawnY = Math.min(Math.max(this.player.y + Math.sin(spawnAngle) * spawnDist, 150), this.arenaHeight - 150);
+    const spawnDist = 550;
+    const kenanSpawnX = Math.min(Math.max(this.player.x + Math.cos(spawnAngle) * spawnDist, 200), this.arenaWidth - 200);
+    const kenanSpawnY = Math.min(Math.max(this.player.y + Math.sin(spawnAngle) * spawnDist, 200), this.arenaHeight - 200);
     this.kenan = new window.Entities.KenanMonster(kenanSpawnX, kenanSpawnY, this.difficulty);
 
     // Hard Mode Jitter
@@ -422,19 +439,21 @@ class Game {
     if (this.gameMode === 'ENDLESS' && this.difficulty === 'hard') container.classList.add('hard-jitter');
     else container.classList.remove('hard-jitter');
 
-    // Base Arena Obstacles & Speed Pads across 4500x3200 map
+    // Base Arena Obstacles & Speed Pads across 9000x6400 enlarged map
     this.obstacles = [
-      new window.Entities.Obstacle(this.arenaWidth * 0.20, this.arenaHeight * 0.20, 65, 'طاولة 1'),
-      new window.Entities.Obstacle(this.arenaWidth * 0.80, this.arenaHeight * 0.20, 65, 'طاولة 2'),
-      new window.Entities.Obstacle(this.arenaWidth * 0.50, this.arenaHeight * 0.35, 75, 'عمود ممر شمالي'),
-      new window.Entities.Obstacle(this.arenaWidth * 0.50, this.arenaHeight * 0.65, 75, 'عمود ممر جنوبي'),
-      new window.Entities.Obstacle(this.arenaWidth * 0.20, this.arenaHeight * 0.80, 60, 'حاجز خشب 1'),
-      new window.Entities.Obstacle(this.arenaWidth * 0.80, this.arenaHeight * 0.80, 60, 'حاجز خشب 2')
+      new window.Entities.Obstacle(this.arenaWidth * 0.20, this.arenaHeight * 0.20, 85, 'طاولة 1'),
+      new window.Entities.Obstacle(this.arenaWidth * 0.80, this.arenaHeight * 0.20, 85, 'طاولة 2'),
+      new window.Entities.Obstacle(this.arenaWidth * 0.50, this.arenaHeight * 0.35, 95, 'عمود ممر شمالي'),
+      new window.Entities.Obstacle(this.arenaWidth * 0.50, this.arenaHeight * 0.65, 95, 'عمود ممر جنوبي'),
+      new window.Entities.Obstacle(this.arenaWidth * 0.20, this.arenaHeight * 0.80, 80, 'حاجز خشب 1'),
+      new window.Entities.Obstacle(this.arenaWidth * 0.80, this.arenaHeight * 0.80, 80, 'حاجز خشب 2'),
+      new window.Entities.Obstacle(this.arenaWidth * 0.35, this.arenaHeight * 0.50, 85, 'طاولة ممر شرقي'),
+      new window.Entities.Obstacle(this.arenaWidth * 0.65, this.arenaHeight * 0.50, 85, 'طاولة ممر غربي')
     ];
 
     this.doors = [
-      new window.Entities.InteractiveDoor(this.arenaWidth * 0.35, this.arenaHeight * 0.30, 110, 30, 'باب الشمال'),
-      new window.Entities.InteractiveDoor(this.arenaWidth * 0.65, this.arenaHeight * 0.70, 110, 30, 'باب الجنوب')
+      new window.Entities.InteractiveDoor(this.arenaWidth * 0.35, this.arenaHeight * 0.30, 140, 35, 'باب الشمال'),
+      new window.Entities.InteractiveDoor(this.arenaWidth * 0.65, this.arenaHeight * 0.70, 140, 35, 'باب الجنوب')
     ];
 
     this.speedPads = [
@@ -599,11 +618,26 @@ class Game {
   gameOver() {
     this.state = 'GAMEOVER';
 
-    window.audioManager.playImpact();
-    const voiceOptions = ['w7sh', 'voice_warak', 'voice_jayak', 'voice_mafer', 'voice_sadtak', 'voice_akaltak'];
-    const selectedVoice = voiceOptions[Math.floor(Math.random() * voiceOptions.length)];
-    window.audioManager.playVoice(selectedVoice);
+    // Kenan Catch Voice Clips & Funny Dialogue Mapping
+    const catchSpeechOptions = [
+      { voice: 'voice_akaltak', text: '💬 كنان: "أكلتك خلاص! 😂"' },
+      { voice: 'voice_sadtak',  text: '💬 كنان: "صدتك ما فيه مفر! 👹"' },
+      { voice: 'voice_warak',   text: '💬 كنان: "وراك وراك حتى لو ركضت! 🏃💨"' },
+      { voice: 'voice_jayak',   text: '💬 كنان: "جايك جايك وأخذتك! 💥"' },
+      { voice: 'voice_mafer',   text: '💬 كنان: "ما فيه مفر مني اليوم! 😈"' }
+    ];
+    const chosenCatch = catchSpeechOptions[Math.floor(Math.random() * catchSpeechOptions.length)];
+
+    // Show caught speech text on jumpscare screen
+    const speechEl = document.getElementById('jumpscare-speech');
+    if (speechEl) {
+      speechEl.innerText = chosenCatch.text;
+      speechEl.classList.remove('hidden');
+    }
+
+    // Play catch audio voice clip clearly
     window.audioManager.stopChase();
+    window.audioManager.playVoice(chosenCatch.voice);
     window.hapticsManager.triggerJumpscare();
 
     const jumpscare = document.getElementById('jumpscare-overlay');
@@ -694,6 +728,41 @@ class Game {
 
     this.score += dt;
     document.getElementById('hud-timer').innerText = `${this.score.toFixed(1)}s`;
+
+    // Timeline Event 20s: Moving Slippers Drop/Spawn Announcement (Endless Mode)
+    if (this.gameMode === 'ENDLESS' && this.score >= 20.0 && !this.slipperSpawnTriggered) {
+      this.slipperSpawnTriggered = true;
+      const slipperAlert = document.getElementById('slipper-alert-banner');
+      if (slipperAlert) {
+        slipperAlert.classList.remove('hidden');
+        setTimeout(() => slipperAlert.classList.add('hidden'), 6500);
+      }
+      window.soundEffectsManager.playDashSound();
+      window.hapticsManager.triggerTac();
+
+      // Initial batch of moving slippers across the map
+      for (let i = 0; i < 4; i++) {
+        this.collectibleSlippers.push(new window.Entities.CollectibleSlipper(
+          300 + Math.random() * (this.arenaWidth - 600),
+          300 + Math.random() * (this.arenaHeight - 600),
+          true
+        ));
+      }
+      this.updateSlipperHudBadge();
+    }
+
+    // Continuous slipper spawn in Endless Mode after 20s
+    if (this.gameMode === 'ENDLESS' && this.slipperSpawnTriggered) {
+      this.slipperSpawnTimer += dt;
+      if (this.slipperSpawnTimer >= 9.0 && this.collectibleSlippers.length < 8) {
+        this.slipperSpawnTimer = 0;
+        this.collectibleSlippers.push(new window.Entities.CollectibleSlipper(
+          300 + Math.random() * (this.arenaWidth - 600),
+          300 + Math.random() * (this.arenaHeight - 600),
+          true
+        ));
+      }
+    }
 
     // Timeline Event 30s: Rage Mode (Endless Mode)
     if (this.gameMode === 'ENDLESS' && this.score >= 30.0 && !this.rageTriggered) {
@@ -978,9 +1047,8 @@ class Game {
   draw() {
     this.ctx.clearRect(0, 0, this.width, this.height);
 
-    // Compute dynamic adaptive camera zoom scale so characters & items are BIG, bold & crisp on mobile
-    const minDim = Math.min(this.width, this.height) || 400;
-    this.zoomScale = Math.max(0.85, Math.min(1.15, minDim / 450));
+    // Dynamic camera scale fixed to 1.0 so map and view on mobile is wide, broad & comfortable
+    this.zoomScale = 1.0;
 
     const visibleW = this.width / this.zoomScale;
     const visibleH = this.height / this.zoomScale;

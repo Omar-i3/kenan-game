@@ -112,6 +112,24 @@ canvas#gameCanvas {
   animation: flashText 0.3s infinite alternate;
 }
 
+.jumpscare-speech-bubble {
+  background: rgba(255, 255, 255, 0.95);
+  color: #000;
+  font-size: 1.25rem;
+  font-weight: 900;
+  padding: 8px 18px;
+  border-radius: 20px;
+  margin-top: 10px;
+  box-shadow: 0 0 20px rgba(255, 204, 0, 0.8), 0 4px 10px rgba(0,0,0,0.5);
+  border: 3px solid var(--secondary-color);
+  animation: popIn 0.3s ease;
+  white-space: nowrap;
+}
+
+.jumpscare-speech-bubble.hidden {
+  display: none !important;
+}
+
 @keyframes flashText {
   0% { transform: scale(0.95); opacity: 0.8; }
   100% { transform: scale(1.08); opacity: 1; }
@@ -776,6 +794,45 @@ button * {
   transition: width 0.1s linear;
 }
 
+/* Slipper Drop Alert HUD Banner */
+.slipper-alert-banner {
+  position: absolute;
+  top: 52px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 12, 32, 0.92);
+  border: 2px solid var(--secondary-color);
+  box-shadow: 0 0 20px rgba(255, 204, 0, 0.6);
+  color: #fff;
+  padding: 6px 18px;
+  border-radius: 20px;
+  font-size: 0.95rem;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  backdrop-filter: blur(8px);
+  z-index: 9;
+  white-space: nowrap;
+  animation: slipperBannerPulse 0.8s infinite alternate;
+}
+
+.slipper-alert-banner.hidden {
+  display: none !important;
+}
+
+.slipper-banner-img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 8px #ffcc00);
+}
+
+@keyframes slipperBannerPulse {
+  0% { transform: translateX(-50%) scale(0.96); box-shadow: 0 0 12px rgba(255, 204, 0, 0.4); }
+  100% { transform: translateX(-50%) scale(1.04); box-shadow: 0 0 24px rgba(255, 204, 0, 0.8); }
+}
+
 /* Rage Alert HUD Banner */
 .rage-alert-banner {
   position: absolute;
@@ -1001,6 +1058,7 @@ button * {
 
 @media (max-width: 480px) {
   #minimap-container { width: 80px; height: 60px; top: 50px; left: 8px; }
-  .skill-btn { width: 46px; height: 46px; font-size: 1.15rem; }
+  .skill-btn { width: 56px; height: 56px; font-size: 1.35rem; }
+  .action-buttons-group { bottom: 12px; right: 12px; gap: 12px; }
   .boss-health-container { width: 85%; top: 6px; padding: 3px 6px; }
 }

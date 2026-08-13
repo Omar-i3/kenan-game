@@ -27,12 +27,14 @@ class JoystickController {
   }
 
   initTouchAndMouseListeners() {
+    this.touchId = null;
+
     const handleStart = (clientX, clientY, target) => {
       if (
         target.closest('button, .diff-btn, .btn-primary, .btn-secondary, .hud-btn, .skill-btn, .glass-panel, .screen-overlay') ||
         (window.game && window.game.state !== 'PLAYING')
       ) {
-        return;
+        return false;
       }
 
       this.pointerActive = true;
@@ -48,6 +50,7 @@ class JoystickController {
         this.base.classList.add('visible');
       }
       this.updateVectorFromPointer(clientX, clientY);
+      return true;
     };
 
     const handleMove = (clientX, clientY) => {
@@ -61,38 +64,63 @@ class JoystickController {
       this.reset();
     };
 
-    // Touch Listeners
+    // Multi-Touch Aware Touch Listeners
     window.addEventListener('touchstart', (e) => {
-      if (e.touches && e.touches.length > 0) {
-        const touch = e.touches[0];
-        handleStart(touch.clientX, touch.clientY, e.target);
+      if (!e.changedTouches) return;
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const touch = e.changedTouches[i];
+        if (this.touchId === null) {
+          const started = handleStart(touch.clientX, touch.clientY, touch.target);
+          if (started) {
+            this.touchId = touch.identifier;
+            break;
+          }
+        }
       }
     }, { passive: true });
 
     window.addEventListener('touchmove', (e) => {
-      if (e.touches && e.touches.length > 0) {
-        const touch = e.touches[0];
-        handleMove(touch.clientX, touch.clientY);
+      if (this.touchId === null || !e.touches) return;
+      for (let i = 0; i < e.touches.length; i++) {
+        const touch = e.touches[i];
+        if (touch.identifier === this.touchId) {
+          handleMove(touch.clientX, touch.clientY);
+          break;
+        }
       }
     }, { passive: true });
 
-    window.addEventListener('touchend', handleEnd, { passive: true });
-    window.addEventListener('touchcancel', handleEnd, { passive: true });
+    const checkTouchEnd = (e) => {
+      if (this.touchId === null || !e.changedTouches) return;
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const touch = e.changedTouches[i];
+        if (touch.identifier === this.touchId) {
+          this.touchId = null;
+          handleEnd();
+          break;
+        }
+      }
+    };
+
+    window.addEventListener('touchend', checkTouchEnd, { passive: true });
+    window.addEventListener('touchcancel', checkTouchEnd, { passive: true });
 
     // Mouse Listeners for Desktop / Laptop
     window.addEventListener('mousedown', (e) => {
-      if (e.button === 0) {
+      if (e.button === 0 && this.touchId === null) {
         handleStart(e.clientX, e.clientY, e.target);
       }
     }, { passive: true });
 
     window.addEventListener('mousemove', (e) => {
-      if (this.pointerActive) {
+      if (this.pointerActive && this.touchId === null) {
         handleMove(e.clientX, e.clientY);
       }
     }, { passive: true });
 
-    window.addEventListener('mouseup', handleEnd, { passive: true });
+    window.addEventListener('mouseup', () => {
+      if (this.touchId === null) handleEnd();
+    }, { passive: true });
   }
 
   updateVectorFromPointer(clientX, clientY) {
