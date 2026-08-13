@@ -5,7 +5,7 @@
   --primary-glow: rgba(255, 51, 102, 0.6);
   --secondary-color: #ffcc00;
   --bg-dark: #0f0c20;
-  --panel-bg: rgba(20, 16, 42, 0.94);
+  --panel-bg: rgba(20, 16, 42, 0.95);
   --panel-border: rgba(255, 255, 255, 0.18);
   --accent-cyan: #00f0ff;
   --accent-green: #00ff88;
@@ -173,7 +173,7 @@ canvas#gameCanvas {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   transition: opacity 0.3s ease, visibility 0.3s ease;
-  padding: 12px;
+  padding: 10px;
   overflow-y: auto;
 }
 
@@ -189,9 +189,9 @@ canvas#gameCanvas {
   border: 2px solid var(--panel-border);
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(255, 255, 255, 0.05);
   border-radius: 20px;
-  padding: 18px 25px;
+  padding: 16px 22px;
   text-align: center;
-  max-width: 540px;
+  max-width: 520px;
   width: 94%;
   max-height: 94vh;
   max-height: 94dvh;
@@ -199,6 +199,9 @@ canvas#gameCanvas {
   margin: auto;
   animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 @keyframes popIn {
@@ -210,7 +213,7 @@ canvas#gameCanvas {
 .mode-select-group {
   display: flex;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   justify-content: center;
 }
 
@@ -219,10 +222,10 @@ canvas#gameCanvas {
   background: rgba(255, 255, 255, 0.08);
   border: 2px solid rgba(255, 255, 255, 0.2);
   color: #ccc;
-  padding: 8px 12px;
-  border-radius: 14px;
+  padding: 7px 10px;
+  border-radius: 12px;
   font-family: var(--font-arabic);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 800;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -236,23 +239,24 @@ canvas#gameCanvas {
 }
 
 .story-mode-desc {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: #ddd;
-  margin: 12px 0 16px 0;
-  line-height: 1.5;
+  margin: 8px 0 12px 0;
+  line-height: 1.4;
 }
 
 /* Stage Cards Grid Modal */
 .story-stages-panel {
-  max-width: 680px;
+  max-width: 650px;
 }
 
 .stage-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 10px;
-  margin: 12px 0;
-  max-height: 55vh;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+  margin: 10px 0;
+  max-height: 52vh;
+  max-height: 52dvh;
   overflow-y: auto;
   padding: 4px;
 }
@@ -260,8 +264,8 @@ canvas#gameCanvas {
 .stage-card {
   background: rgba(255, 255, 255, 0.06);
   border: 2px solid rgba(255, 255, 255, 0.15);
-  border-radius: 14px;
-  padding: 10px;
+  border-radius: 12px;
+  padding: 8px;
   text-align: center;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -270,7 +274,7 @@ canvas#gameCanvas {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 95px;
+  min-height: 85px;
 }
 
 .stage-card:active {
@@ -305,25 +309,25 @@ canvas#gameCanvas {
 }
 
 .stage-card .stage-num {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--accent-cyan);
   font-weight: 800;
 }
 
 .stage-card .stage-title {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 900;
   color: #fff;
-  margin: 3px 0;
+  margin: 2px 0;
 }
 
 .stage-card .stage-icon {
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   margin-top: 2px;
 }
 
 .stage-card .lock-icon {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   color: #888;
 }
 
@@ -336,13 +340,13 @@ canvas#gameCanvas {
   background: rgba(15, 12, 32, 0.88);
   border: 2px solid var(--accent-cyan);
   box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
-  padding: 6px 18px;
-  border-radius: 20px;
+  padding: 5px 16px;
+  border-radius: 18px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   backdrop-filter: blur(6px);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 800;
   color: #fff;
   white-space: nowrap;
@@ -356,29 +360,29 @@ canvas#gameCanvas {
 .hud-objective-banner .count-badge {
   background: var(--accent-cyan);
   color: #000;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 900;
-  padding: 2px 8px;
-  border-radius: 12px;
+  padding: 2px 7px;
+  border-radius: 10px;
 }
 
 /* Giant Kenan Boss Health Bar HUD */
 .boss-health-container {
   position: absolute;
-  top: 12px;
+  top: 10px;
   left: 50%;
   transform: translateX(-50%);
   width: 70%;
-  max-width: 380px;
+  max-width: 360px;
   background: rgba(15, 12, 32, 0.92);
   border: 2px solid var(--danger-color);
   box-shadow: 0 0 20px rgba(255, 0, 68, 0.5);
-  border-radius: 16px;
-  padding: 8px 14px;
+  border-radius: 14px;
+  padding: 6px 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   backdrop-filter: blur(6px);
   z-index: 8;
 }
@@ -388,7 +392,7 @@ canvas#gameCanvas {
 }
 
 .boss-name-label {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 900;
   color: var(--secondary-color);
   text-shadow: 0 0 8px #ff0044;
@@ -396,9 +400,9 @@ canvas#gameCanvas {
 
 .boss-health-bar-bg {
   width: 100%;
-  height: 14px;
+  height: 12px;
   background: rgba(255, 255, 255, 0.12);
-  border-radius: 7px;
+  border-radius: 6px;
   overflow: hidden;
   border: 1px solid rgba(255, 0, 68, 0.5);
 }
@@ -411,7 +415,7 @@ canvas#gameCanvas {
 }
 
 .boss-hp-text {
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 800;
   color: #fff;
   font-family: monospace, var(--font-arabic);
@@ -430,11 +434,11 @@ canvas#gameCanvas {
 
 /* Start Screen & UI Styling */
 .game-title {
-  font-size: 2.2rem;
+  font-size: 2rem;
   font-weight: 900;
   color: var(--secondary-color);
   text-shadow: 0 0 10px rgba(255, 204, 0, 0.6), 3px 3px 0px #ff3366, 6px 6px 0px #000;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
   letter-spacing: -1px;
   animation: pulseTitle 2s infinite alternate;
 }
@@ -445,34 +449,34 @@ canvas#gameCanvas {
 }
 
 .game-subtitle {
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   color: #cccccc;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 /* Difficulty Selector */
 .section-label {
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   font-weight: 700;
   color: var(--accent-cyan);
-  margin-bottom: 6px;
+  margin-bottom: 5px;
 }
 
 .difficulty-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 14px;
+  gap: 6px;
+  margin-bottom: 12px;
 }
 
 .diff-btn {
   background: rgba(255, 255, 255, 0.07);
   border: 2px solid rgba(255, 255, 255, 0.15);
   color: #fff;
-  padding: 8px 12px;
-  border-radius: 14px;
+  padding: 7px 10px;
+  border-radius: 12px;
   font-family: var(--font-arabic);
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   font-weight: 800;
   cursor: pointer;
   display: flex;
@@ -494,7 +498,7 @@ canvas#gameCanvas {
 }
 
 .diff-btn .diff-desc {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   opacity: 0.85;
   font-weight: 500;
 }
@@ -505,14 +509,14 @@ canvas#gameCanvas {
   background: linear-gradient(135deg, #ff3366 0%, #ff0044 100%);
   border: none;
   color: #ffffff;
-  padding: 11px;
-  font-size: 1.15rem;
+  padding: 10px;
+  font-size: 1.1rem;
   font-weight: 900;
-  border-radius: 16px;
+  border-radius: 14px;
   cursor: pointer;
   box-shadow: 0 8px 25px var(--primary-glow), inset 0 2px 0 rgba(255, 255, 255, 0.3);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   pointer-events: auto;
 }
 
@@ -526,10 +530,10 @@ canvas#gameCanvas {
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.25);
   color: #eee;
-  padding: 8px;
-  font-size: 0.9rem;
+  padding: 7px;
+  font-size: 0.88rem;
   font-weight: 700;
-  border-radius: 14px;
+  border-radius: 12px;
   cursor: pointer;
   transition: background 0.2s ease;
   pointer-events: auto;
@@ -543,11 +547,11 @@ canvas#gameCanvas {
 .high-score-badge {
   background: rgba(0, 240, 255, 0.1);
   border: 1px dashed var(--accent-cyan);
-  border-radius: 12px;
-  padding: 4px 12px;
+  border-radius: 10px;
+  padding: 3px 10px;
   display: inline-block;
-  margin-bottom: 10px;
-  font-size: 0.82rem;
+  margin-bottom: 8px;
+  font-size: 0.8rem;
   color: var(--accent-cyan);
   font-weight: 700;
 }
@@ -561,7 +565,7 @@ canvas#gameCanvas {
   height: 100%;
   pointer-events: none;
   z-index: 5;
-  padding: 12px 16px;
+  padding: 10px 14px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -577,22 +581,22 @@ canvas#gameCanvas {
   background: rgba(15, 12, 32, 0.8);
   border: 2px solid var(--accent-cyan);
   box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
-  padding: 5px 14px;
-  border-radius: 18px;
+  padding: 4px 12px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   backdrop-filter: blur(5px);
 }
 
 .timer-label {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: #bbb;
   font-weight: 700;
 }
 
 .timer-value {
-  font-size: 1.35rem;
+  font-size: 1.25rem;
   font-weight: 900;
   color: #fff;
   font-family: monospace, var(--font-arabic);
@@ -603,10 +607,10 @@ canvas#gameCanvas {
   background: rgba(255, 255, 255, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.35);
   color: #fff;
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
-  font-size: 1.1rem;
+  font-size: 1rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -617,14 +621,14 @@ canvas#gameCanvas {
 /* Desktop Controls Hint Banner */
 .desktop-hint-banner {
   position: absolute;
-  bottom: 12px;
+  bottom: 10px;
   left: 50%;
   transform: translateX(-50%);
   background: rgba(15, 12, 32, 0.85);
   border: 1px solid rgba(0, 240, 255, 0.4);
-  padding: 5px 16px;
-  border-radius: 18px;
-  font-size: 0.82rem;
+  padding: 4px 14px;
+  border-radius: 16px;
+  font-size: 0.8rem;
   color: #ddd;
   backdrop-filter: blur(5px);
   pointer-events: none;
@@ -638,10 +642,10 @@ canvas#gameCanvas {
 /* Minimap Component */
 #minimap-container {
   position: absolute;
-  top: 60px;
-  left: 16px;
-  width: 110px;
-  height: 80px;
+  top: 55px;
+  left: 14px;
+  width: 100px;
+  height: 75px;
   background: rgba(15, 12, 32, 0.85);
   border: 2px solid var(--accent-cyan);
   border-radius: 10px;
@@ -659,23 +663,23 @@ canvas#gameCanvas {
 /* Action Skill Buttons (Bottom Right) */
 .action-buttons-group {
   position: absolute;
-  bottom: 20px;
-  right: 20px;
+  bottom: 16px;
+  right: 16px;
   display: flex;
-  gap: 12px;
+  gap: 10px;
   pointer-events: auto;
   z-index: 6;
 }
 
 .skill-btn {
   position: relative;
-  width: 56px;
-  height: 56px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   border: 2px solid var(--accent-cyan);
   background: radial-gradient(circle at 30% 30%, rgba(0, 240, 255, 0.4), rgba(15, 12, 32, 0.9));
   color: #fff;
-  font-size: 1.35rem;
+  font-size: 1.3rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -700,7 +704,7 @@ canvas#gameCanvas {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 900;
   color: var(--secondary-color);
 }
@@ -711,10 +715,10 @@ canvas#gameCanvas {
   right: -4px;
   background: var(--secondary-color);
   color: #000;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 900;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -724,15 +728,15 @@ canvas#gameCanvas {
 /* Active PowerUp Bar */
 .powerup-indicator {
   position: absolute;
-  top: 60px;
-  right: 16px;
+  top: 55px;
+  right: 14px;
   background: rgba(15, 12, 32, 0.85);
   border: 1px solid var(--accent-green);
   border-radius: 10px;
-  padding: 6px 10px;
+  padding: 5px 8px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);
 }
 
@@ -741,14 +745,14 @@ canvas#gameCanvas {
 }
 
 .powerup-icon {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
 }
 
 .powerup-bar-container {
-  width: 80px;
-  height: 7px;
+  width: 70px;
+  height: 6px;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
+  border-radius: 3px;
   overflow: hidden;
 }
 
@@ -762,13 +766,13 @@ canvas#gameCanvas {
 /* Rage Alert HUD Banner */
 .rage-alert-banner {
   position: absolute;
-  top: 60px;
+  top: 55px;
   left: 50%;
   transform: translateX(-50%);
   background: linear-gradient(90deg, transparent 0%, rgba(255, 0, 68, 0.9) 20%, rgba(255, 0, 68, 0.9) 80%, transparent 100%);
   color: #fff;
-  padding: 5px 25px;
-  font-size: 1rem;
+  padding: 4px 20px;
+  font-size: 0.92rem;
   font-weight: 900;
   text-shadow: 0 2px 4px #000;
   border-top: 2px solid var(--secondary-color);
@@ -799,8 +803,8 @@ canvas#gameCanvas {
 
 .joystick-base {
   position: absolute;
-  width: 110px;
-  height: 110px;
+  width: 105px;
+  height: 105px;
   background: rgba(255, 255, 255, 0.08);
   border: 2px solid rgba(255, 255, 255, 0.25);
   border-radius: 50%;
@@ -816,8 +820,8 @@ canvas#gameCanvas {
 
 .joystick-stick {
   position: absolute;
-  width: 46px;
-  height: 46px;
+  width: 44px;
+  height: 44px;
   background: radial-gradient(circle at 30% 30%, #00f0ff, #0088cc);
   border: 2px solid #ffffff;
   border-radius: 50%;
@@ -829,23 +833,23 @@ canvas#gameCanvas {
 
 /* Game Over Loss Quotes & Titles */
 .loss-quote {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 800;
   color: var(--secondary-color);
-  margin: 8px 0;
+  margin: 6px 0;
   background: rgba(255, 204, 0, 0.1);
   border-right: 4px solid var(--secondary-color);
-  padding: 8px 12px;
+  padding: 6px 10px;
   border-radius: 8px;
 }
 
 .title-badge-card {
   background: linear-gradient(135deg, rgba(0, 240, 255, 0.2), rgba(255, 51, 102, 0.2));
   border: 1px solid var(--accent-cyan);
-  border-radius: 12px;
-  padding: 6px 12px;
-  margin: 8px 0;
-  font-size: 1rem;
+  border-radius: 10px;
+  padding: 5px 10px;
+  margin: 6px 0;
+  font-size: 0.95rem;
   font-weight: 900;
   color: var(--accent-cyan);
 }
@@ -853,7 +857,7 @@ canvas#gameCanvas {
 .score-summary {
   display: flex;
   justify-content: space-around;
-  margin: 10px 0;
+  margin: 8px 0;
 }
 
 .score-item {
@@ -862,12 +866,12 @@ canvas#gameCanvas {
 }
 
 .score-item .label {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: #aaa;
 }
 
 .score-item .val {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   font-weight: 900;
   color: #fff;
 }
@@ -875,12 +879,12 @@ canvas#gameCanvas {
 .new-record-badge {
   background: linear-gradient(135deg, #00ff88, #00b359);
   color: #000;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 900;
-  padding: 3px 10px;
-  border-radius: 10px;
+  padding: 2px 8px;
+  border-radius: 8px;
   display: inline-block;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
   animation: pulseBadge 0.8s infinite alternate;
 }
 
@@ -889,75 +893,101 @@ canvas#gameCanvas {
   100% { transform: scale(1.05); }
 }
 
-/* Landscape Mobile & Tablet Responsiveness Optimization */
+/* Ultra Compact Landscape Mobile Phone Responsive Optimization (< 520px height) */
 @media (max-height: 520px) or (orientation: landscape) {
+  .screen-overlay {
+    padding: 6px;
+    align-items: center;
+    justify-content: center;
+  }
   .glass-panel {
-    padding: 10px 18px;
-    max-width: 560px;
-    max-height: 96vh;
-    max-height: 96dvh;
+    padding: 8px 14px;
+    max-width: 540px;
+    max-height: 94vh;
+    max-height: 94dvh;
+    border-radius: 14px;
   }
   .game-title {
-    font-size: 1.5rem;
+    font-size: 1.35rem;
     margin-bottom: 2px;
   }
   .game-subtitle {
-    font-size: 0.8rem;
-    margin-bottom: 6px;
-  }
-  .high-score-badge {
-    padding: 3px 8px;
-    margin-bottom: 6px;
-    font-size: 0.78rem;
-  }
-  .section-label {
     font-size: 0.78rem;
     margin-bottom: 4px;
   }
+  .mode-select-group {
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+  .mode-btn {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    border-radius: 10px;
+  }
+  .high-score-badge {
+    padding: 2px 6px;
+    margin-bottom: 4px;
+    font-size: 0.72rem;
+  }
+  .section-label {
+    font-size: 0.72rem;
+    margin-bottom: 3px;
+  }
   .difficulty-group {
     flex-direction: row;
-    gap: 6px;
-    margin-bottom: 10px;
+    gap: 4px;
+    margin-bottom: 6px;
   }
   .diff-btn {
-    padding: 6px 8px;
-    font-size: 0.8rem;
+    padding: 4px 6px;
+    font-size: 0.75rem;
     flex: 1;
     flex-direction: column;
     text-align: center;
-    gap: 2px;
+    border-radius: 10px;
   }
   .diff-btn .diff-desc {
-    font-size: 0.68rem;
+    display: none;
   }
   .btn-primary {
-    padding: 8px 12px;
-    font-size: 1rem;
-    margin-bottom: 5px;
+    padding: 6px 10px;
+    font-size: 0.95rem;
+    border-radius: 12px;
+    margin-bottom: 4px;
   }
   .btn-secondary {
-    padding: 6px;
-    font-size: 0.8rem;
+    padding: 4px 8px;
+    font-size: 0.78rem;
+    border-radius: 10px;
+  }
+  .story-mode-desc {
+    font-size: 0.78rem;
+    margin: 4px 0 8px 0;
   }
   .stage-cards-grid {
     grid-template-columns: repeat(5, 1fr);
-    gap: 6px;
-    max-height: 48vh;
+    gap: 4px;
+    max-height: 44vh;
+    max-height: 44dvh;
   }
   .stage-card {
-    min-height: 75px;
-    padding: 6px;
+    min-height: 60px;
+    padding: 4px;
+    border-radius: 10px;
+  }
+  .stage-card .stage-num {
+    font-size: 0.65rem;
   }
   .stage-card .stage-title {
-    font-size: 0.78rem;
+    font-size: 0.72rem;
   }
   .stage-card .stage-icon {
-    font-size: 1.2rem;
+    font-size: 1rem;
   }
 }
 
 @media (max-width: 480px) {
-  #minimap-container { width: 85px; height: 65px; top: 55px; left: 10px; }
-  .skill-btn { width: 50px; height: 50px; font-size: 1.2rem; }
-  .boss-health-container { width: 85%; top: 8px; padding: 4px 8px; }
+  #minimap-container { width: 80px; height: 60px; top: 50px; left: 8px; }
+  .skill-btn { width: 46px; height: 46px; font-size: 1.15rem; }
+  .boss-health-container { width: 85%; top: 6px; padding: 3px 6px; }
 }

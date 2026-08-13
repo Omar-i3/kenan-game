@@ -30,6 +30,7 @@ const ASSET_PATHS = {
   sprinkler: './assets/item_sprinkler.png',
   wire: './assets/item_wire.png',
   candy: './assets/item_candy.png',
+  slipper: './assets/item_slipper.png',
   keycard: './assets/item_key.png',
   generator: './assets/item_switch.png',
   crystal: './assets/obstacle_crystal.png',
@@ -977,12 +978,12 @@ const STORY_STAGES = [
     themeColor: "#ff0000",
     isBossFight: true,
     bossHp: 100,
-    objectiveText: "⚔️ قتال البوس: ارمي النعال (👡) على كنان العملاق ودمّره!",
+    objectiveText: "⚔️ قتال البوس: ارمي الزنوبة (👡) على كنان العملاق ودمّره!",
     itemsNeeded: 0,
     itemType: "slipper",
     icon: "👡",
-    itemLabel: "النعال الطائرة",
-    desc: "المواجهة الحاسمة! كنان العملاق (+250%). ارمي النعال واهزمه!"
+    itemLabel: "الزنوبة الطائرة",
+    desc: "المواجهة الحاسمة! كنان العملاق (+250%). ارمي الزنوبة واهزمه!"
   }
 ];
 
@@ -1113,7 +1114,7 @@ class SlipperProjectile {
   constructor(x, y, targetX, targetY) {
     this.x = x;
     this.y = y;
-    this.radius = 16;
+    this.radius = 18;
     this.speed = 650;
     this.lifespan = 2.5;
 
@@ -1137,13 +1138,21 @@ class SlipperProjectile {
     ctx.translate(this.x, this.y);
     ctx.rotate(this.angle);
 
-    ctx.shadowColor = '#ffcc00';
-    ctx.shadowBlur = 15;
+    const slpImg = ASSET_IMAGES['slipper'];
+    if (slpImg && slpImg.complete && slpImg.naturalWidth > 0) {
+      ctx.shadowColor = '#ffcc00';
+      ctx.shadowBlur = 15;
+      const sSize = this.radius * 2.8;
+      ctx.drawImage(slpImg, -sSize / 2, -sSize / 2, sSize, sSize);
+    } else {
+      ctx.shadowColor = '#ffcc00';
+      ctx.shadowBlur = 15;
 
-    ctx.font = '28px Cairo, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('👡', 0, 0);
+      ctx.font = '28px Cairo, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('👡', 0, 0);
+    }
 
     ctx.restore();
   }
