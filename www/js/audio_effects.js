@@ -1,226 +1,252 @@
 /**
  * Sound Effects & Voice Synthesizer for Monster Kenan Expansion
- * Handles Panic Screams, Dash, Banana Slip, Teleport Warp, Door Break, and Boss Hit/Death SFX
+ * Shares AudioContext from AudioManager. Uses preloaded AudioBuffers for kenan_hit & kenan_dead.
+ * All other SFX use Web Audio API oscillator synthesis (zero-latency, Android compatible).
  */
 class SoundEffectsManager {
   constructor() {
-    this.audioCtx = null;
     this.lastPanicTime = 0;
-    this.hitAudio = null;
-    this.deadAudio = null;
-    this.init();
   }
 
-  init() {
-    try {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (AudioContext) {
-        this.audioCtx = new AudioContext();
-      }
+  /**
+   * Get shared AudioContext from AudioManager (single context for entire app).
+   * Falls back to creating own context if AudioManager not ready yet.
+   */
+  _getContext() {
+    if (window.audioManager && window.audioManager.audioContext) {
+      return window.audioManager.audioContext;
+    }
+    return null;
+  }
 
-      this.hitAudio = new Audio('./kenan_hit.mp3');
-      this.hitAudio.preload = 'auto';
-      this.hitAudio.onerror = () => {
-        this.hitAudio.src = './assets/kenan_hit.mp3';
-        this.hitAudio.load();
-      };
-
-      this.deadAudio = new Audio('./kenan_dead.mp3');
-      this.deadAudio.preload = 'auto';
-      this.deadAudio.onerror = () => {
-        this.deadAudio.src = './assets/kenan_dead.mp3';
-        this.deadAudio.load();
-      };
-    } catch (e) {}
+  /**
+   * Get the master gain node from AudioManager for routing.
+   */
+  _getDestination() {
+    if (window.audioManager && window.audioManager.masterGain) {
+      return window.audioManager.masterGain;
+    }
+    const ctx = this._getContext();
+    return ctx ? ctx.destination : null;
   }
 
   unlock() {
-    if (this.audioCtx && this.audioCtx.state === 'suspended') {
-      this.audioCtx.resume();
+    // AudioContext resumption is handled by AudioManager.unlockAudio()
+    if (window.audioManager) {
+      // Ensure context exists
+      if (!window.audioManager.audioContext) {
+        window.audioManager._initContext();
+      }
+      if (window.audioManager.audioContext && window.audioManager.audioContext.state === 'suspended') {
+        window.audioManager.audioContext.resume().catch(() => {});
+      }
     }
   }
 
-  // Comical Panic Voice Scream when Kenan is extremely close (< 130px)
+  // ─── Comical Panic Voice Scream when Kenan is extremely close (<130px) ───
   playPanicVoice() {
-    if (!this.audioCtx) return;
+    this.unlock();
+    const ctx = this._getContext();
+    const dest = this._getDestination();
+    if (!ctx || !dest) return;
+
     const now = performance.now();
     if (now - this.lastPanicTime < 2500) return; // Cooldown between screams
     this.lastPanicTime = now;
 
-    this.unlock();
     try {
-      const osc = this.audioCtx.createOscillator();
-      const gain = this.audioCtx.createGain();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
 
       osc.type = 'triangle';
-      osc.frequency.setValueAtTime(450, this.audioCtx.currentTime);
-      osc.frequency.linearRampToValueAtTime(750, this.audioCtx.currentTime + 0.15);
-      osc.frequency.linearRampToValueAtTime(350, this.audioCtx.currentTime + 0.4);
+      osc.frequency.setValueAtTime(450, ctx.currentTime);
+      osc.frequency.linearRampToValueAtTime(750, ctx.currentTime + 0.15);
+      osc.frequency.linearRampToValueAtTime(350, ctx.currentTime + 0.4);
 
-      gain.gain.setValueAtTime(0.4, this.audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.4);
+      gain.gain.setValueAtTime(0.4, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
 
       osc.connect(gain);
-      gain.connect(this.audioCtx.destination);
+      gain.connect(dest);
 
       osc.start();
-      osc.stop(this.audioCtx.currentTime + 0.4);
+      osc.stop(ctx.currentTime + 0.4);
     } catch (e) {}
   }
 
-  // Dash Skill Burst SFX
+  // ─── Dash Skill Burst SFX ───
   playDashSound() {
-    if (!this.audioCtx) return;
     this.unlock();
+    const ctx = this._getContext();
+    const dest = this._getDestination();
+    if (!ctx || !dest) return;
+
     try {
-      const osc = this.audioCtx.createOscillator();
-      const gain = this.audioCtx.createGain();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
 
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(200, this.audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(800, this.audioCtx.currentTime + 0.2);
+      osc.frequency.setValueAtTime(200, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.2);
 
-      gain.gain.setValueAtTime(0.35, this.audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.2);
+      gain.gain.setValueAtTime(0.35, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
 
       osc.connect(gain);
-      gain.connect(this.audioCtx.destination);
+      gain.connect(dest);
 
       osc.start();
-      osc.stop(this.audioCtx.currentTime + 0.2);
+      osc.stop(ctx.currentTime + 0.2);
     } catch (e) {}
   }
 
-  // Banana Slip Whistle SFX
+  // ─── Banana Slip Whistle SFX ───
   playBananaSlipSound() {
-    if (!this.audioCtx) return;
     this.unlock();
+    const ctx = this._getContext();
+    const dest = this._getDestination();
+    if (!ctx || !dest) return;
+
     try {
-      const osc = this.audioCtx.createOscillator();
-      const gain = this.audioCtx.createGain();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
 
       osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(800, this.audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(150, this.audioCtx.currentTime + 0.4);
+      osc.frequency.setValueAtTime(800, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.4);
 
-      gain.gain.setValueAtTime(0.4, this.audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.4);
+      gain.gain.setValueAtTime(0.4, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
 
       osc.connect(gain);
-      gain.connect(this.audioCtx.destination);
+      gain.connect(dest);
 
       osc.start();
-      osc.stop(this.audioCtx.currentTime + 0.4);
+      osc.stop(ctx.currentTime + 0.4);
     } catch (e) {}
   }
 
-  // Teleport Warp SFX
+  // ─── Teleport Warp SFX ───
   playTeleportSound() {
-    if (!this.audioCtx) return;
     this.unlock();
+    const ctx = this._getContext();
+    const dest = this._getDestination();
+    if (!ctx || !dest) return;
+
     try {
-      const osc = this.audioCtx.createOscillator();
-      const gain = this.audioCtx.createGain();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
 
       osc.type = 'square';
-      osc.frequency.setValueAtTime(1200, this.audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(200, this.audioCtx.currentTime + 0.3);
+      osc.frequency.setValueAtTime(1200, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.3);
 
-      gain.gain.setValueAtTime(0.3, this.audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.3);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
 
       osc.connect(gain);
-      gain.connect(this.audioCtx.destination);
+      gain.connect(dest);
 
       osc.start();
-      osc.stop(this.audioCtx.currentTime + 0.3);
+      osc.stop(ctx.currentTime + 0.3);
     } catch (e) {}
   }
 
-  // Door Break Wood Crunch SFX
+  // ─── Door Break Wood Crunch SFX ───
   playDoorBreakSound() {
-    if (!this.audioCtx) return;
     this.unlock();
+    const ctx = this._getContext();
+    const dest = this._getDestination();
+    if (!ctx || !dest) return;
+
     try {
-      const osc = this.audioCtx.createOscillator();
-      const gain = this.audioCtx.createGain();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
 
       osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(180, this.audioCtx.currentTime);
-      osc.frequency.setValueAtTime(90, this.audioCtx.currentTime + 0.1);
+      osc.frequency.setValueAtTime(180, ctx.currentTime);
+      osc.frequency.setValueAtTime(90, ctx.currentTime + 0.1);
 
-      gain.gain.setValueAtTime(0.5, this.audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.3);
+      gain.gain.setValueAtTime(0.5, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
 
       osc.connect(gain);
-      gain.connect(this.audioCtx.destination);
+      gain.connect(dest);
 
       osc.start();
-      osc.stop(this.audioCtx.currentTime + 0.3);
+      osc.stop(ctx.currentTime + 0.3);
     } catch (e) {}
   }
 
-  // Giant Kenan Boss Hit SFX (kenan_hit.mp3 or synth fallback)
+  // ─── Giant Kenan Boss Hit SFX (preloaded kenan_hit buffer or synth fallback) ───
   playBossHitSound() {
     this.unlock();
-    if (this.hitAudio) {
-      this.hitAudio.currentTime = 0;
-      this.hitAudio.play().catch(() => this.playSynthBossHit());
-    } else {
-      this.playSynthBossHit();
+    // Try preloaded buffer from AudioManager
+    if (window.audioManager && window.audioManager.buffers.kenan_hit) {
+      const result = window.audioManager._playBuffer('kenan_hit', { volume: 1.0 });
+      if (result) return;
     }
+    this.playSynthBossHit();
   }
 
   playSynthBossHit() {
-    if (!this.audioCtx) return;
+    this.unlock();
+    const ctx = this._getContext();
+    const dest = this._getDestination();
+    if (!ctx || !dest) return;
+
     try {
-      const osc = this.audioCtx.createOscillator();
-      const gain = this.audioCtx.createGain();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
 
       osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(400, this.audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(80, this.audioCtx.currentTime + 0.25);
+      osc.frequency.setValueAtTime(400, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.25);
 
-      gain.gain.setValueAtTime(0.6, this.audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.25);
+      gain.gain.setValueAtTime(0.6, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
 
       osc.connect(gain);
-      gain.connect(this.audioCtx.destination);
+      gain.connect(dest);
 
       osc.start();
-      osc.stop(this.audioCtx.currentTime + 0.25);
+      osc.stop(ctx.currentTime + 0.25);
     } catch (e) {}
   }
 
-  // Giant Kenan Boss Death SFX (kenan_dead.mp3 or synth fallback)
+  // ─── Giant Kenan Boss Death SFX (preloaded kenan_dead buffer or synth fallback) ───
   playBossDeadSound() {
     this.unlock();
-    if (this.deadAudio) {
-      this.deadAudio.currentTime = 0;
-      this.deadAudio.play().catch(() => this.playSynthBossDead());
-    } else {
-      this.playSynthBossDead();
+    // Try preloaded buffer from AudioManager
+    if (window.audioManager && window.audioManager.buffers.kenan_dead) {
+      const result = window.audioManager._playBuffer('kenan_dead', { volume: 1.0 });
+      if (result) return;
     }
+    this.playSynthBossDead();
   }
 
   playSynthBossDead() {
-    if (!this.audioCtx) return;
+    this.unlock();
+    const ctx = this._getContext();
+    const dest = this._getDestination();
+    if (!ctx || !dest) return;
+
     try {
-      const osc = this.audioCtx.createOscillator();
-      const gain = this.audioCtx.createGain();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
 
       osc.type = 'square';
-      osc.frequency.setValueAtTime(150, this.audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(30, this.audioCtx.currentTime + 1.2);
+      osc.frequency.setValueAtTime(150, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(30, ctx.currentTime + 1.2);
 
-      gain.gain.setValueAtTime(0.8, this.audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 1.2);
+      gain.gain.setValueAtTime(0.8, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1.2);
 
       osc.connect(gain);
-      gain.connect(this.audioCtx.destination);
+      gain.connect(dest);
 
       osc.start();
-      osc.stop(this.audioCtx.currentTime + 1.2);
+      osc.stop(ctx.currentTime + 1.2);
     } catch (e) {}
   }
 }
