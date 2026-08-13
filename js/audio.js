@@ -44,18 +44,21 @@ class AudioManager {
         this.audioContext = new AudioCtx();
       }
 
-      // Load HTML5 Audio elements with relative paths
+      // Load HTML5 Audio elements with relative paths and instant load
       this.chaseAudio = new Audio('./3ooo.mp3');
       this.chaseAudio.loop = true;
       this.chaseAudio.preload = 'auto';
+      this.chaseAudio.load();
 
       this.impactAudio = new Audio('./w7sh.mp3');
       this.impactAudio.preload = 'auto';
+      this.impactAudio.load();
 
-      // Preload all voice clips
+      // Preload all voice clips instantly
       for (const [key, path] of Object.entries(VOICE_FILES)) {
         const aud = new Audio(path);
         aud.preload = 'auto';
+        aud.load();
         this.voiceAudioMap[key] = aud;
       }
 
@@ -80,7 +83,15 @@ class AudioManager {
   // Ensure AudioContext is resumed after user interaction
   unlockAudio() {
     if (this.audioContext && this.audioContext.state === 'suspended') {
-      this.audioContext.resume();
+      this.audioContext.resume().catch(() => {});
+    }
+
+    // Force warm up preloading audio elements on touch/click
+    if (this.chaseAudio && this.chaseAudio.readyState < 2) {
+      this.chaseAudio.load();
+    }
+    if (this.impactAudio && this.impactAudio.readyState < 2) {
+      this.impactAudio.load();
     }
   }
 
@@ -105,12 +116,12 @@ class AudioManager {
     }
   }
 
-  // Play voice clip with overlap prevention & 70% background audio ducking
+  // Play voice clip with zero latency & 70% background audio ducking
   playVoice(voiceKey) {
     if (this.isMuted) return;
     this.unlockAudio();
 
-    // 1. Stop any currently playing voice audio clip immediately (prevent overlap)
+    // 1. Stop any currently playing voice audio clip immediately
     this.stopCurrentVoice();
 
     const voiceAudio = this.voiceAudioMap[voiceKey];
@@ -171,18 +182,15 @@ class AudioManager {
   updateProximity(distance, maxDistance, isRage = false) {
     if (this.isMuted || !this.isPlayingChase) return;
 
-    // Calculate volume: 1.0 when close (0 distance), 0.10 when far (maxDistance)
     const normDist = Math.min(Math.max(distance / maxDistance, 0), 1);
     this.baseVolume = Math.max(0.1, 1.0 - normDist * 0.85);
 
     this.applyCurrentVolume();
 
-    // Set playback pitch rate for Rage Mode
     if (this.chaseAudio) {
       this.chaseAudio.playbackRate = isRage ? 1.25 : 1.0;
     }
 
-    // If using fallback synth
     if (this.isUsingSynth && this.synthGain) {
       const finalVol = this.baseVolume * this.voiceDuckingMultiplier;
       this.synthGain.gain.setValueAtTime(finalVol * 0.3, this.audioContext.currentTime);

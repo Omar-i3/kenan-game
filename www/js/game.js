@@ -953,8 +953,23 @@ class Game {
   draw() {
     this.ctx.clearRect(0, 0, this.width, this.height);
 
+    // Compute dynamic adaptive camera zoom scale so characters & items are BIG, bold & crisp on mobile
+    const minDim = Math.min(this.width, this.height) || 400;
+    this.zoomScale = Math.max(1.45, Math.min(2.2, 700 / minDim));
+
     this.ctx.save();
-    this.ctx.translate(-Math.round(this.camera.x), -Math.round(this.camera.y));
+
+    // Camera Center Tracking on Player with Zoom Scale
+    const targetX = this.player ? this.player.x : this.arenaWidth / 2;
+    const targetY = this.player ? this.player.y : this.arenaHeight / 2;
+
+    this.ctx.translate(this.width / 2, this.height / 2);
+    this.ctx.scale(this.zoomScale, this.zoomScale);
+    this.ctx.translate(-Math.round(targetX), -Math.round(targetY));
+
+    // Update Camera bounding box for minimap culling
+    this.camera.x = targetX - (this.width / (2 * this.zoomScale));
+    this.camera.y = targetY - (this.height / (2 * this.zoomScale));
 
     this.drawStageBackground();
     this.drawArenaGrid();
@@ -1003,8 +1018,8 @@ class Game {
     this.ctx.strokeStyle = 'rgba(180, 220, 255, 0.35)';
     this.ctx.lineWidth = 1.5;
     for (let i = 0; i < 40; i++) {
-      const rx = (this.camera.x + Math.random() * this.width);
-      const ry = (this.camera.y + Math.random() * this.height);
+      const rx = (this.camera.x + Math.random() * (this.width / (this.zoomScale || 1)));
+      const ry = (this.camera.y + Math.random() * (this.height / (this.zoomScale || 1)));
       this.ctx.beginPath();
       this.ctx.moveTo(rx, ry);
       this.ctx.lineTo(rx - 10, ry + 25);
@@ -1086,9 +1101,12 @@ class Game {
       mctx.fill();
     }
 
+    const visibleW = this.width / (this.zoomScale || 1);
+    const visibleH = this.height / (this.zoomScale || 1);
+
     mctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
     mctx.lineWidth = 1;
-    mctx.strokeRect(this.camera.x * scaleX, this.camera.y * scaleY, this.width * scaleX, this.height * scaleY);
+    mctx.strokeRect(this.camera.x * scaleX, this.camera.y * scaleY, visibleW * scaleX, visibleH * scaleY);
   }
 
   loop(timestamp) {
