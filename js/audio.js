@@ -111,23 +111,29 @@ class AudioManager {
   }
 
   /**
-   * Create an Audio element with preload, fallback path, and tracking.
+   * Create an Audio element with preload, multiple fallback paths, and tracking.
    */
   _createAudio(path, addToPool = true) {
     const audio = new Audio();
     audio.preload = 'auto';
     audio._originalPath = path;
-    audio._triedAsset = false;
+    audio._fallbackIndex = 0;
 
-    // Try loading from provided path first
-    audio.src = path;
+    const filename = path.split('/').pop();
+    const possiblePaths = [
+      path,
+      './assets/' + filename,
+      './' + filename,
+      'assets/' + filename,
+      filename
+    ];
+
+    audio.src = possiblePaths[0];
 
     audio.onerror = () => {
-      if (!audio._triedAsset) {
-        audio._triedAsset = true;
-        // Try ./assets/ fallback for Capacitor/www builds
-        const filename = path.split('/').pop();
-        audio.src = './assets/' + filename;
+      audio._fallbackIndex = (audio._fallbackIndex || 0) + 1;
+      if (audio._fallbackIndex < possiblePaths.length) {
+        audio.src = possiblePaths[audio._fallbackIndex];
         audio.load();
       }
     };
@@ -167,6 +173,11 @@ class AudioManager {
           const p = audio.play();
           if (p !== undefined) {
             p.then(() => {
+              // NEVER pause if this audio was started as the active chase music!
+              if (this.isPlayingChase && audio === this.activeChaseAudio) {
+                audio.volume = Math.max(0, Math.min(1, this.baseVolume * this.voiceDuckingMultiplier));
+                return;
+              }
               audio.pause();
               audio.currentTime = 0;
               audio.volume = 1.0;
@@ -174,8 +185,10 @@ class AudioManager {
               audio.volume = 1.0;
             });
           } else {
-            audio.pause();
-            audio.currentTime = 0;
+            if (!this.isPlayingChase || audio !== this.activeChaseAudio) {
+              audio.pause();
+              audio.currentTime = 0;
+            }
             audio.volume = 1.0;
           }
         } catch (e) {
@@ -200,11 +213,12 @@ class AudioManager {
     this.stopChaseLoopOnly();
 
     let targetAudio = null;
-    if (monsterType === 'kenan' || monsterType === 'all') {
+    const m = (monsterType || 'kenan').toLowerCase();
+    if (m === 'kenan' || m === 'all') {
       targetAudio = this.chaseAudioMap.kenan;
-    } else if (monsterType === 'elias') {
+    } else if (m === 'elias') {
       targetAudio = this.chaseAudioMap.elias;
-    } else if (monsterType === 'qamar') {
+    } else if (m === 'qamar') {
       targetAudio = this.chaseAudioMap.qamar;
     }
 
@@ -217,8 +231,9 @@ class AudioManager {
         const p = targetAudio.play();
         if (p !== undefined) {
           p.catch(err => {
-            console.warn('[AudioManager] Chase play blocked, using synth:', err.message);
-            this.startSynthChase();
+            console.warn('[AudioManager] Chase play failed on first attempt, retrying:', err.message);
+            targetAudio.load();
+            targetAudio.play().catch(() => this.startSynthChase());
           });
         }
       } catch (e) {

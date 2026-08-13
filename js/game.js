@@ -922,7 +922,19 @@ class Game {
     this.state = 'PLAYING';
     this.lastTime = performance.now();
     document.getElementById('pause-screen').classList.add('hidden');
-    window.audioManager.startChase();
+
+    let chaseMonster = 'kenan';
+    if (this.gameMode === 'CHASE') {
+      chaseMonster = (this.chaseSelectionType === 'GROUP' || (this.chaseSelectedMonsters && this.chaseSelectedMonsters.length > 1))
+        ? 'all'
+        : (this.chaseSelectedMonsters && this.chaseSelectedMonsters[0] ? this.chaseSelectedMonsters[0] : 'kenan');
+    } else if (this.gameMode === 'STORY') {
+      const stageData = window.Entities.STORY_STAGES_CONFIG ? window.Entities.STORY_STAGES_CONFIG[this.currentStageId] : null;
+      chaseMonster = (stageData && (stageData.isGrandFinal || this.currentStageId === 21))
+        ? 'all'
+        : (stageData && stageData.monsterType ? stageData.monsterType : 'kenan');
+    }
+    window.audioManager.startChase(chaseMonster);
   }
 
   returnToMenu() {
