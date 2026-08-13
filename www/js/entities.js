@@ -125,6 +125,7 @@ class Player {
 
     // Item Inventory
     this.bananaTraps = 2;
+    this.slippers = 0;
   }
 
   triggerDash() {
@@ -869,126 +870,130 @@ const STORY_STAGES = [
     id: 1,
     name: "المرحلة 1: الصالة",
     themeColor: "#ff9900",
-    objectiveText: "🎯 المهمة: ابحث عن المفتاح (🔑) وافتح الباب للهروب!",
+    objectiveText: "🎯 المهمة: اجمع المفتاح (🔑) واهرب إلى بوابة الخروج (🚪)!",
     itemsNeeded: 1,
     itemType: "key",
     icon: "🔑",
     itemLabel: "مفتاح البوابة",
-    desc: "أول مرحلة في المنزل، ابحث عن المفتاح للهروب من الصالة!"
+    desc: "أول مرحلة في المنزل، اجمع المفتاح واهرب عبر بوابة الخروج!"
   },
   {
     id: 2,
     name: "المرحلة 2: المطبخ",
     themeColor: "#ffaa00",
     slipperyFloor: true,
-    objectiveText: "🎯 المهمة: اجمع 3 علب عصير (🧃) واهرب من المطبخ المبلل!",
+    objectiveText: "🎯 المهمة: اجمع 3 علب عصير (🧃) واهرب إلى بوابة الخروج (🚪)!",
     itemsNeeded: 3,
     itemType: "juice",
     icon: "🧃",
     itemLabel: "علب عصير",
-    desc: "الأرضية مبللة وتزلق! اجمع 3 علب عصير لتفتح المخرج."
+    desc: "الأرضية مبللة وتزلق! اجمع 3 علب عصير لتفتح بوابة الخروج."
   },
   {
     id: 3,
     name: "المرحلة 3: غرفة النوم",
     themeColor: "#9900ff",
     isNightMode: true,
-    objectiveText: "🎯 المهمة: شغل 3 مفاتيح إضاءة (🔘) بالكشاف!",
+    objectiveText: "🎯 المهمة: شغل 3 مفاتيح إضاءة (🔘) واهرب عبر البوابة (🚪)!",
     itemsNeeded: 3,
     itemType: "switch",
     icon: "🔘",
     itemLabel: "مفاتيح الإضاءة",
-    desc: "الغرفة مظلمة بالكامل! استخدم الكشاف لتشغيل مفاتيح الإضاءة."
+    desc: "الغرفة مظلمة بالكامل! استخدم الكشاف لتشغيل مفاتيح الإضاءة واهرب."
   },
   {
     id: 4,
     name: "المرحلة 4: الممر",
     themeColor: "#00ccff",
     hasCorridorDoors: true,
-    objectiveText: "🎯 المهمة: أغلق الأبواب لتعطيل كنان واجمع بطاقة المرور (💳)!",
+    objectiveText: "🎯 المهمة: اجمع بطاقة المرور (💳) واهرب عبر بوابة الممر (🚪)!",
     itemsNeeded: 1,
     itemType: "keycard",
     icon: "💳",
     itemLabel: "بطاقة المرور",
-    desc: "استخدم الأبواب التفاعلية لإعاقة كنان واهرب من الممر."
+    desc: "استخدم الأبواب التفاعلية لإعاقة كنان واهرب عبر بوابة الممر."
   },
   {
     id: 5,
     name: "المرحلة 5: الحوش",
     themeColor: "#00ff88",
     hasSpeedPads: true,
-    objectiveText: "🎯 المهمة: قف على 3 رشاشات ماء (💦) لإغراق كنان!",
+    objectiveText: "🎯 المهمة: قف على 3 رشاشات ماء (💦) واهرب عبر بوابة الحوش (🚪)!",
     itemsNeeded: 3,
     itemType: "sprinkler",
     icon: "💦",
     itemLabel: "رشاشات الماء",
-    desc: "استغل سجادات السرعة وقف على رشاشات الماء لإغراق كنان."
+    desc: "استغل سجادات السرعة واقف على رشاشات الماء واهرب عبر البوابة."
   },
   {
     id: 6,
     name: "المرحلة 6: القبو",
     themeColor: "#885522",
     pushableCrates: true,
-    objectiveText: "🎯 المهمة: ادفع الصناديق الخشبية (📦) لسد الطريق واجمع المولد (🔋)!",
+    hasSlippers: true,
+    objectiveText: "🎯 المهمة: ادفع الصناديق (📦)، اجمع المولد (🔋) والزنوبة 👡 واهرب عبر البوابة!",
     itemsNeeded: 1,
     itemType: "generator",
     icon: "🔋",
     itemLabel: "بطارية المولد",
-    desc: "يمكنك دفع الصناديق الخشبية لسد الممرات أمام كنان!"
+    desc: "ادفع الصناديق، اجمع الزنوبة لضرب كنان واهرب عبر بوابة القبو."
   },
   {
     id: 7,
     name: "المرحلة 7: السطح",
     themeColor: "#5588ff",
     weatherRain: true,
-    objectiveText: "🎯 المهمة: اجمع سلكين (🔌) لإصلاح المصعد في المطر!",
+    hasSlippers: true,
+    objectiveText: "🎯 المهمة: اجمع سلكين (🔌) والزنوبة 👡 واهرب عبر المصعد (🚪)!",
     itemsNeeded: 2,
     itemType: "wire",
     icon: "🔌",
     itemLabel: "أسلاك الكهرباء",
-    desc: "أجواء ممطرة وضبابية! اجمع سلكين لإصلاح المصعد والهروب."
+    desc: "أجواء ممطرة وضبابية! اجمع الأسلاك والزنوبة واهرب عبر المصعد."
   },
   {
     id: 8,
     name: "المرحلة 8: المجلس",
     themeColor: "#ff0044",
     permanentRage: true,
-    objectiveText: "🎯 المهمة: اجمع 4 قطع حلوى (🍬) وكنان في وضع الغضب الدائم!",
+    hasSlippers: true,
+    objectiveText: "🎯 المهمة: اجمع 4 قطع حلوى (🍬) والزنوبة 👡 واهرب عبر البوابة!",
     itemsNeeded: 4,
     itemType: "candy",
     icon: "🍬",
     itemLabel: "قطع الحلوى",
-    desc: "كنان معصب جداً بوضع الغضب! اجمع 4 قطع حلوى بسرعة."
+    desc: "كنان معصب جداً بوضع الغضب! اجمع الحلوى والزنوبة واهرب بسرعة."
   },
   {
     id: 9,
     name: "المرحلة 9: عالم الميمز",
     themeColor: "#aa00ff",
     hasClones: true,
-    objectiveText: "🎯 المهمة: دمر 3 بلورات ميمز (🔮) بين النسخ الوهمية!",
+    objectiveText: "🎯 المهمة: دمر 3 بلورات ميمز (🔮) والزنوبة 👡 واهرب عبر البوابة!",
     itemsNeeded: 3,
     itemType: "crystal",
     icon: "🔮",
     itemLabel: "بلورات الميمز",
-    desc: "عالم الميمز المليء بالنسخ الوهمية! دهس ودمر 3 بلورات نادرة."
+    desc: "عالم الميمز المليء بالنسخ! دمر البلورات واجمع الزنوبة واهرب."
   },
   {
     id: 10,
     name: "المرحلة 10: قتال البوس الأخير",
     themeColor: "#ff0000",
     isBossFight: true,
+    hasSlippers: true,
     bossHp: 100,
-    objectiveText: "⚔️ قتال البوس: ارمي الزنوبة (👡) على كنان العملاق ودمّره!",
+    objectiveText: "⚔️ قتال البوس: اجمع الزنوبات وارميها (👡) على كنان العملاق ودمّره!",
     itemsNeeded: 0,
     itemType: "slipper",
     icon: "👡",
     itemLabel: "الزنوبة الطائرة",
-    desc: "المواجهة الحاسمة! كنان العملاق (+250%). ارمي الزنوبة واهزمه!"
+    desc: "المواجهة الحاسمة! اجمع الزنوبات وارميهم على كنان العملاق حتى تقتله!"
   }
 ];
 
 /**
- * Story Collectible Item
+ * Dynamic Fleeing Story Collectible Item 🏃
  */
 class StoryItem {
   constructor(x, y, type, icon) {
@@ -1001,8 +1006,23 @@ class StoryItem {
     this.animTimer = Math.random() * Math.PI * 2;
   }
 
-  update(dt) {
+  update(dt, playerX, playerY, arenaWidth, arenaHeight) {
     this.animTimer += dt * 3.5;
+
+    // Flee away from Player when approached (< 220px)
+    if (playerX !== undefined && playerY !== undefined && !this.isCollected) {
+      const dist = Math.hypot(this.x - playerX, this.y - playerY);
+      if (dist < 220 && dist > 10) {
+        const fleeAngle = Math.atan2(this.y - playerY, this.x - playerX) + (Math.random() - 0.5) * 0.4;
+        const fleeSpeed = 165;
+        this.x += Math.cos(fleeAngle) * fleeSpeed * dt;
+        this.y += Math.sin(fleeAngle) * fleeSpeed * dt;
+
+        // Keep inside arena boundaries
+        this.x = Math.min(Math.max(this.x, this.radius + 60), arenaWidth - this.radius - 60);
+        this.y = Math.min(Math.max(this.y, this.radius + 60), arenaHeight - this.radius - 60);
+      }
+    }
   }
 
   draw(ctx) {
@@ -1042,6 +1062,139 @@ class StoryItem {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(this.icon, 0, 1);
+    }
+
+    ctx.restore();
+  }
+}
+
+/**
+ * Exit Gate Portal 🚪 (Unlocks after collecting all stage items)
+ */
+class ExitGate {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.radius = 38;
+    this.isOpen = false;
+    this.animTimer = 0;
+  }
+
+  update(dt, playerX, playerY, arenaWidth, arenaHeight) {
+    this.animTimer += dt * 4;
+
+    // Optional gentle fleeing/moving when open and player gets very near
+    if (this.isOpen && playerX !== undefined && playerY !== undefined) {
+      const dist = Math.hypot(this.x - playerX, this.y - playerY);
+      if (dist < 160 && dist > 20) {
+        const moveAngle = Math.atan2(this.y - playerY, this.x - playerX) + (Math.random() - 0.5) * 0.3;
+        const moveSpeed = 120;
+        this.x += Math.cos(moveAngle) * moveSpeed * dt;
+        this.y += Math.sin(moveAngle) * moveSpeed * dt;
+
+        this.x = Math.min(Math.max(this.x, this.radius + 80), arenaWidth - this.radius - 80);
+        this.y = Math.min(Math.max(this.y, this.radius + 80), arenaHeight - this.radius - 80);
+      }
+    }
+  }
+
+  draw(ctx) {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+
+    if (this.isOpen) {
+      ctx.shadowColor = '#00ff88';
+      ctx.shadowBlur = 30;
+
+      // Pulsing Green Beacon
+      const pulse = 1 + Math.sin(this.animTimer) * 0.15;
+      ctx.scale(pulse, pulse);
+
+      ctx.fillStyle = 'rgba(0, 255, 136, 0.35)';
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius + 12, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#0f2b1d';
+      ctx.strokeStyle = '#00ff88';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      const doorImg = ASSET_IMAGES['door'];
+      if (doorImg && doorImg.complete && doorImg.naturalWidth > 0) {
+        ctx.drawImage(doorImg, -this.radius * 0.7, -this.radius * 0.7, this.radius * 1.4, this.radius * 1.4);
+      } else {
+        ctx.font = '28px Cairo, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🚪', 0, 0);
+      }
+    } else {
+      ctx.shadowColor = 'rgba(255, 255, 255, 0.2)';
+      ctx.shadowBlur = 8;
+      ctx.fillStyle = 'rgba(50, 50, 70, 0.4)';
+      ctx.strokeStyle = '#555577';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.font = '20px Cairo, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🔒', 0, 0);
+    }
+
+    ctx.restore();
+  }
+}
+
+/**
+ * Collectible Slipper Entity 👡 (Ground Pickups)
+ */
+class CollectibleSlipper {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.radius = 22;
+    this.isCollected = false;
+    this.animTimer = Math.random() * Math.PI * 2;
+  }
+
+  update(dt) {
+    this.animTimer += dt * 3.5;
+  }
+
+  draw(ctx) {
+    if (this.isCollected) return;
+
+    ctx.save();
+    ctx.translate(this.x, this.y);
+
+    const floatOffset = Math.sin(this.animTimer) * 5;
+    ctx.translate(0, floatOffset);
+
+    ctx.shadowColor = '#ffcc00';
+    ctx.shadowBlur = 16;
+
+    ctx.fillStyle = 'rgba(255, 204, 0, 0.25)';
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius + 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    const slpImg = ASSET_IMAGES['slipper'];
+    if (slpImg && slpImg.complete && slpImg.naturalWidth > 0) {
+      const sSize = this.radius * 2.4;
+      ctx.drawImage(slpImg, -sSize / 2, -sSize / 2, sSize, sSize);
+    } else {
+      ctx.font = '24px Cairo, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('👡', 0, 0);
     }
 
     ctx.restore();
@@ -1139,7 +1292,7 @@ class SlipperProjectile {
     ctx.rotate(this.angle);
 
     const slpImg = ASSET_IMAGES['slipper'];
-    if (slpImg && slpImg.complete && slpImg.naturalWidth > 0) {
+    if (slpImg && slpImg.complete && slpImg naturalWidth > 0) {
       ctx.shadowColor = '#ffcc00';
       ctx.shadowBlur = 15;
       const sSize = this.radius * 2.8;
@@ -1169,6 +1322,8 @@ window.Entities = {
   Obstacle,
   PowerUp,
   StoryItem,
+  ExitGate,
+  CollectibleSlipper,
   PushableCrate,
   SlipperProjectile,
   STORY_STAGES,

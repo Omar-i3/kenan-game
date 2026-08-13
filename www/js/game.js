@@ -17,8 +17,10 @@ class Game {
     this.currentStageId = 1;
     this.unlockedStage = parseInt(localStorage.getItem('kenan_unlocked_stage') || '1', 10);
     this.storyItems = [];
+    this.collectibleSlippers = [];
     this.pushableCrates = [];
     this.slippers = [];
+    this.exitGate = null;
     this.stageItemsCollected = 0;
     this.stageItemsTotal = 0;
 
@@ -72,9 +74,9 @@ class Game {
       this.minimapCanvas.width = 110;
       this.minimapCanvas.height = 80;
 
-      // Arena size enlarged by 200% (3.0x viewport width & height)
-      this.arenaWidth = Math.round(this.width * 3.0);
-      this.arenaHeight = Math.round(this.height * 3.0);
+      // Expanded Massive Map Arena (4500 x 3200)
+      this.arenaWidth = 4500;
+      this.arenaHeight = 3200;
     };
     window.addEventListener('resize', resize);
     window.addEventListener('orientationchange', () => setTimeout(resize, 200));
@@ -194,6 +196,8 @@ class Game {
     });
 
     bindBtn('restart-btn', () => {
+      document.getElementById('victory-screen').classList.add('hidden');
+      document.getElementById('game-over-screen').classList.add('hidden');
       if (this.gameMode === 'STORY') {
         this.startStoryStage(this.currentStageId);
       } else {
@@ -208,6 +212,7 @@ class Game {
     });
 
     bindBtn('next-stage-btn', () => {
+      document.getElementById('victory-screen').classList.add('hidden');
       if (this.currentStageId < 10) {
         this.startStoryStage(this.currentStageId + 1);
       } else {
@@ -217,6 +222,7 @@ class Game {
     });
 
     bindBtn('victory-menu-btn', () => {
+      document.getElementById('victory-screen').classList.add('hidden');
       this.openStageSelectScreen();
       window.hapticsManager.triggerTac();
     });
@@ -259,6 +265,7 @@ class Game {
     document.getElementById('start-screen').classList.add('hidden');
     document.getElementById('victory-screen').classList.add('hidden');
     document.getElementById('game-over-screen').classList.add('hidden');
+    document.getElementById('hud-layer').classList.add('hidden');
 
     const grid = document.getElementById('stage-cards-grid');
     grid.innerHTML = '';
@@ -299,9 +306,17 @@ class Game {
   }
 
   throwSlipper() {
-    if (this.state !== 'PLAYING' || !this.player || !this.kenan || !this.kenan.isBoss) return;
+    if (this.state !== 'PLAYING' || !this.player || !this.kenan) return;
     
-    // Launch slipper towards Giant Kenan Boss
+    // Check if player has slippers or is in Boss Fight
+    if (!this.kenan.isBoss && this.player.slippers <= 0) return;
+
+    if (!this.kenan.isBoss) {
+      this.player.slippers--;
+      this.updateSlipperHudBadge();
+    }
+
+    // Launch slipper towards Kenan
     this.slippers.push(new window.Entities.SlipperProjectile(
       this.player.x, this.player.y,
       this.kenan.x, this.kenan.y
@@ -309,6 +324,22 @@ class Game {
     
     window.soundEffectsManager.playDashSound();
     window.hapticsManager.triggerTac();
+  }
+
+  updateSlipperHudBadge() {
+    const slipperBtn = document.getElementById('slipper-btn');
+    const badge = document.getElementById('slipper-count-badge');
+    if (!slipperBtn || !badge) return;
+
+    if (this.kenan && this.kenan.isBoss) {
+      slipperBtn.classList.remove('hidden');
+      badge.innerText = '∞';
+    } else if (this.player && this.player.slippers > 0) {
+      slipperBtn.classList.remove('hidden');
+      badge.innerText = this.player.slippers;
+    } else {
+      slipperBtn.classList.add('hidden');
+    }
   }
 
   updateHighScoreDisplay() {
@@ -327,6 +358,7 @@ class Game {
     this.bananaTraps = [];
     this.particles = [];
     this.storyItems = [];
+    this.collectibleSlippers = [];
     this.pushableCrates = [];
     this.slippers = [];
     this.activePowerUp = null;
@@ -339,34 +371,38 @@ class Game {
     document.getElementById('hud-objective-banner').classList.add('hidden');
     document.getElementById('boss-health-container').classList.add('hidden');
     document.getElementById('slipper-btn').classList.add('hidden');
+
     const jumpscare = document.getElementById('jumpscare-overlay');
     if (jumpscare) jumpscare.classList.add('hidden');
 
-    // Spawn Player at Center
+    // Spawn Player at Center of 4500x3200 Arena
     this.player = new window.Entities.Player(this.arenaWidth / 2, this.arenaHeight / 2);
     document.getElementById('banana-count').innerText = this.player.bananaTraps;
 
-    // Spawn Kenan
-    this.kenan = new window.Entities.KenanMonster(150, 150, this.difficulty);
+    // Exit Gate Portal Position (Far Corner)
+    this.exitGate = new window.Entities.ExitGate(this.arenaWidth - 280, this.arenaHeight - 280);
+
+    // Spawn Kenan Pursuer
+    this.kenan = new window.Entities.KenanMonster(200, 200, this.difficulty);
 
     // Hard Mode Jitter
     const container = document.getElementById('game-container');
     if (this.gameMode === 'ENDLESS' && this.difficulty === 'hard') container.classList.add('hard-jitter');
     else container.classList.remove('hard-jitter');
 
-    // Base Arena Obstacles & Speed Pads
+    // Base Arena Obstacles & Speed Pads across 4500x3200 map
     this.obstacles = [
-      new window.Entities.Obstacle(this.arenaWidth * 0.20, this.arenaHeight * 0.20, 50, 'طاولة 1'),
-      new window.Entities.Obstacle(this.arenaWidth * 0.80, this.arenaHeight * 0.20, 50, 'طاولة 2'),
-      new window.Entities.Obstacle(this.arenaWidth * 0.50, this.arenaHeight * 0.35, 60, 'عمود ممر شمالي'),
-      new window.Entities.Obstacle(this.arenaWidth * 0.50, this.arenaHeight * 0.65, 60, 'عمود ممر جنوبي'),
-      new window.Entities.Obstacle(this.arenaWidth * 0.20, this.arenaHeight * 0.80, 45, 'حاجز خشب 1'),
-      new window.Entities.Obstacle(this.arenaWidth * 0.80, this.arenaHeight * 0.80, 45, 'حاجز خشب 2')
+      new window.Entities.Obstacle(this.arenaWidth * 0.20, this.arenaHeight * 0.20, 65, 'طاولة 1'),
+      new window.Entities.Obstacle(this.arenaWidth * 0.80, this.arenaHeight * 0.20, 65, 'طاولة 2'),
+      new window.Entities.Obstacle(this.arenaWidth * 0.50, this.arenaHeight * 0.35, 75, 'عمود ممر شمالي'),
+      new window.Entities.Obstacle(this.arenaWidth * 0.50, this.arenaHeight * 0.65, 75, 'عمود ممر جنوبي'),
+      new window.Entities.Obstacle(this.arenaWidth * 0.20, this.arenaHeight * 0.80, 60, 'حاجز خشب 1'),
+      new window.Entities.Obstacle(this.arenaWidth * 0.80, this.arenaHeight * 0.80, 60, 'حاجز خشب 2')
     ];
 
     this.doors = [
-      new window.Entities.InteractiveDoor(this.arenaWidth * 0.35, this.arenaHeight * 0.30, 95, 26, 'باب الشمال'),
-      new window.Entities.InteractiveDoor(this.arenaWidth * 0.65, this.arenaHeight * 0.70, 95, 26, 'باب الجنوب')
+      new window.Entities.InteractiveDoor(this.arenaWidth * 0.35, this.arenaHeight * 0.30, 110, 30, 'باب الشمال'),
+      new window.Entities.InteractiveDoor(this.arenaWidth * 0.65, this.arenaHeight * 0.70, 110, 30, 'باب الجنوب')
     ];
 
     this.speedPads = [
@@ -387,6 +423,7 @@ class Game {
     document.getElementById('stage-select-screen').classList.add('hidden');
     document.getElementById('pause-screen').classList.add('hidden');
     document.getElementById('game-over-screen').classList.add('hidden');
+    document.getElementById('victory-screen').classList.add('hidden');
     document.getElementById('hud-layer').classList.remove('hidden');
 
     window.audioManager.startChase();
@@ -438,10 +475,21 @@ class Game {
       for (let i = 0; i < stageData.itemsNeeded; i++) {
         const pos = positions[i % positions.length];
         this.storyItems.push(new window.Entities.StoryItem(
-          pos.x + (Math.random() - 0.5) * 100,
-          pos.y + (Math.random() - 0.5) * 100,
+          pos.x + (Math.random() - 0.5) * 200,
+          pos.y + (Math.random() - 0.5) * 200,
           stageData.itemType,
           stageData.icon
+        ));
+      }
+    }
+
+    // Spawn Ground Collectible Slippers (Stages 6 to 10)
+    if (stageData.hasSlippers || stageId >= 6) {
+      const count = stageData.isBossFight ? 5 : 2;
+      for (let i = 0; i < count; i++) {
+        this.collectibleSlippers.push(new window.Entities.CollectibleSlipper(
+          150 + Math.random() * (this.arenaWidth - 300),
+          150 + Math.random() * (this.arenaHeight - 300)
         ));
       }
     }
@@ -450,9 +498,10 @@ class Game {
     if (stageData.isBossFight) {
       this.kenan.setAsBoss(100);
       document.getElementById('boss-health-container').classList.remove('hidden');
-      document.getElementById('slipper-btn').classList.remove('hidden');
       this.updateBossHpBar();
     }
+
+    this.updateSlipperHudBadge();
 
     // Show HUD Objective Banner
     const objBanner = document.getElementById('hud-objective-banner');
@@ -467,6 +516,7 @@ class Game {
     document.getElementById('stage-select-screen').classList.add('hidden');
     document.getElementById('pause-screen').classList.add('hidden');
     document.getElementById('game-over-screen').classList.add('hidden');
+    document.getElementById('victory-screen').classList.add('hidden');
     document.getElementById('hud-layer').classList.remove('hidden');
 
     window.audioManager.startChase();
@@ -517,35 +567,21 @@ class Game {
   gameOver() {
     this.state = 'GAMEOVER';
 
-    // Pick random Game Over / Jumpscare Voice Option
-    const jumpscareVoiceOptions = [
-      { text: "صَدتك!", voice: "voice_sadtak" },
-      { text: "أكَلتك خلاص!", voice: "voice_akaltak" }
-    ];
-    const chosenVoice = jumpscareVoiceOptions[Math.floor(Math.random() * jumpscareVoiceOptions.length)];
+    const voiceOptions = ['w7sh', 'voice_warak', 'voice_jayak', 'voice_mafer'];
+    const selectedVoice = voiceOptions[Math.floor(Math.random() * voiceOptions.length)];
+    window.audioManager.playVoice(selectedVoice);
+    window.audioManager.stopChase();
+    window.hapticsManager.triggerJumpscare();
 
-    window.audioManager.playImpact();
-    window.audioManager.playVoice(chosenVoice.voice);
-    window.hapticsManager.triggerImpact();
-
-    const container = document.getElementById('game-container');
-    container.classList.add('shake-screen');
-    setTimeout(() => container.classList.remove('shake-screen'), 600);
-
-    // Update Jumpscare text
-    const jumpscareTextEl = document.querySelector('.jumpscare-text');
-    if (jumpscareTextEl) {
-      jumpscareTextEl.innerText = `${chosenVoice.text} 😱💥`;
-    }
-
-    // Reveal Fullscreen Kenan Jumpscare
     const jumpscare = document.getElementById('jumpscare-overlay');
     if (jumpscare) jumpscare.classList.remove('hidden');
 
-    // Save High Score
-    const currentHs = this.highScores[this.difficulty] || 0.0;
+    const container = document.getElementById('game-container');
+    container.classList.add('shake-screen');
+    setTimeout(() => container.classList.remove('shake-screen'), 500);
+
     let isNewRecord = false;
-    if (this.score > currentHs) {
+    if (this.gameMode === 'ENDLESS' && this.score > this.highScores[this.difficulty]) {
       this.highScores[this.difficulty] = this.score;
       localStorage.setItem(`kenan_highscore_${this.difficulty}`, this.score.toFixed(1));
       isNewRecord = true;
@@ -555,7 +591,6 @@ class Game {
     const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
     document.getElementById('loss-quote').innerText = `"${randomQuote}"`;
 
-    // Funny Title Badge
     document.getElementById('loss-title-badge').innerText = this.getFunnyTitleBadge(this.score);
 
     const badge = document.getElementById('new-record-badge');
@@ -565,7 +600,6 @@ class Game {
     document.getElementById('final-score').innerText = `${this.score.toFixed(1)}s`;
     document.getElementById('high-score').innerText = `${this.highScores[this.difficulty].toFixed(1)}s`;
 
-    // Transition from Jumpscare to Game Over Screen after 1.2 seconds
     setTimeout(() => {
       if (jumpscare) jumpscare.classList.add('hidden');
       document.getElementById('hud-layer').classList.add('hidden');
@@ -579,7 +613,6 @@ class Game {
     window.soundEffectsManager.playBossDeadSound();
     window.hapticsManager.triggerImpact();
 
-    // Unlock next stage in localStorage
     if (this.currentStageId >= this.unlockedStage && this.unlockedStage < 10) {
       this.unlockedStage = this.currentStageId + 1;
       localStorage.setItem('kenan_unlocked_stage', this.unlockedStage.toString());
@@ -593,11 +626,10 @@ class Game {
       descEl.innerText = '🎉 👑 تهانينا الحارة! هدمت كنان العملاق وختمت قصة الوحش كنان بنجاح 100%! 🏆';
       document.getElementById('next-stage-btn').innerText = '🗺️ قائمة المراحل';
     } else {
-      descEl.innerText = 'أحسنت! نجحت في حل اللغز واكتملت المرحلة بنجاح!';
+      descEl.innerText = 'أحسنت! نجحت في الهروب عبر البوابة واكتملت المرحلة بنجاح!';
       document.getElementById('next-stage-btn').innerText = '⏩ المرحلة التالية';
     }
 
-    // Fireworks particles
     for (let i = 0; i < 40; i++) {
       this.particles.push(new window.Entities.Particle(
         this.player.x + (Math.random() - 0.5) * 300,
@@ -648,155 +680,95 @@ class Game {
       if (this.lightningTimer >= 5.0) {
         this.lightningTimer = 0;
         const lightning = document.getElementById('lightning-overlay');
-        lightning.classList.add('flash');
-        setTimeout(() => lightning.classList.remove('flash'), 120);
+        if (lightning) {
+          lightning.classList.add('flash');
+          setTimeout(() => lightning.classList.remove('flash'), 100);
+        }
       }
     }
 
-    // Timeline Event 40s: Night Mode (Endless Mode)
-    if (this.gameMode === 'ENDLESS' && this.score >= 40.0 && !this.isNightMode) {
-      this.isNightMode = true;
-      window.hapticsManager.triggerTac();
-    }
-
-    // Timeline Event 45s: Kenan Clones (Endless Mode)
-    if (this.gameMode === 'ENDLESS' && this.score >= 45.0 && !this.clonesTriggered) {
-      this.clonesTriggered = true;
-      this.clones.push(new window.Entities.KenanClone(this.arenaWidth * 0.3, this.arenaHeight * 0.3));
-      this.clones.push(new window.Entities.KenanClone(this.arenaWidth * 0.7, this.arenaHeight * 0.7));
-      window.hapticsManager.triggerTac();
-    }
-
-    // Power-Up Spawner
+    // Spawn PowerUps periodically
     this.powerUpSpawnTimer += dt;
     if (this.powerUpSpawnTimer >= this.nextPowerUpDelay) {
       this.powerUpSpawnTimer = 0;
-      this.nextPowerUpDelay = 10 + Math.random() * 5;
-      if (this.powerUps.length < 3) this.spawnPowerUp();
+      this.nextPowerUpDelay = 12 + Math.random() * 8;
+      this.spawnPowerUp();
     }
 
-    // Inputs & Updates
-    const inputVector = window.joystickController.getVector();
-    this.player.update(dt, inputVector, this.arenaWidth, this.arenaHeight, this.obstacles, this.doors);
-    this.kenan.update(dt, this.player.x, this.player.y, this.arenaWidth, this.arenaHeight, this.obstacles, this.doors, this.particles);
-
-    // Pushable Crates Physics (Stage 6)
-    this.pushableCrates.forEach(crate => {
-      const dist = Math.hypot(this.player.x - crate.x, this.player.y - crate.y);
-      if (dist < (this.player.radius + crate.radius)) {
-        crate.push(inputVector.x * dt, inputVector.y * dt, this.obstacles, this.arenaWidth, this.arenaHeight);
-      }
-    });
-
-    // Story Collectible Items Update & Collision
-    this.storyItems.forEach(item => {
-      if (item.isCollected) return;
-      item.update(dt);
-
-      const dist = Math.hypot(this.player.x - item.x, this.player.y - item.y);
-      if (dist < (this.player.radius + item.radius)) {
-        item.isCollected = true;
-        this.stageItemsCollected++;
-        window.soundEffectsManager.playDashSound();
-        window.hapticsManager.triggerTac();
-
-        document.getElementById('objective-count-badge').innerText = `${this.stageItemsCollected}/${this.stageItemsTotal}`;
-
-        // Create item collect particle burst
-        for (let i = 0; i < 10; i++) {
-          this.particles.push(new window.Entities.Particle(
-            item.x, item.y, (Math.random() - 0.5) * 150, (Math.random() - 0.5) * 150,
-            '#00f0ff', 6, 0.4
-          ));
-        }
-
-        // Check if all stage items collected!
-        if (this.stageItemsCollected >= this.stageItemsTotal) {
-          this.completeStoryStage();
-          return;
-        }
-      }
-    });
-
-    // Slipper Projectiles Update & Collision (Stage 10 Boss Fight)
-    this.slippers.forEach((slp, sIdx) => {
-      slp.update(dt);
-      if (this.kenan && this.kenan.isBoss) {
-        const dist = Math.hypot(slp.x - this.kenan.x, slp.y - this.kenan.y);
-        if (dist < (slp.radius + this.kenan.radius)) {
-          // Hit Giant Kenan Boss!
-          this.kenan.bossHp -= 10;
-          this.updateBossHpBar();
-          window.soundEffectsManager.playBossHitSound();
-          window.hapticsManager.triggerImpact();
-
-          // Particle burst
-          for (let i = 0; i < 12; i++) {
-            this.particles.push(new window.Entities.Particle(
-              slp.x, slp.y, (Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200,
-              '#ffcc00', 8, 0.4
-            ));
-          }
-
-          // Screen shake
-          const container = document.getElementById('game-container');
-          container.classList.add('shake-screen');
-          setTimeout(() => container.classList.remove('shake-screen'), 300);
-
-          this.slippers.splice(sIdx, 1);
-
-          // Check if Boss Defeated!
-          if (this.kenan.bossHp <= 0) {
-            this.completeStoryStage();
-            return;
-          }
-        }
-      }
-    });
-    this.slippers = this.slippers.filter(s => s.lifespan > 0);
-
-    this.clones.forEach(c => c.update(dt, this.arenaWidth, this.arenaHeight, this.obstacles));
-    this.powerUps.forEach(pu => pu.update(dt));
-    this.speedPads.forEach(sp => sp.update(dt));
-    this.powerUps = this.powerUps.filter(pu => pu.lifespan > 0);
-
-    this.particles.forEach(p => p.update(dt));
-    this.particles = this.particles.filter(p => p.life > 0);
-
-    // Smooth Camera Follow
-    const targetCamX = this.player.x - this.width / 2;
-    const targetCamY = this.player.y - this.height / 2;
-    this.camera.x += (targetCamX - this.camera.x) * 0.1;
-    this.camera.y += (targetCamY - this.camera.y) * 0.1;
-    this.camera.x = Math.min(Math.max(this.camera.x, 0), this.arenaWidth - this.width);
-    this.camera.y = Math.min(Math.max(this.camera.y, 0), this.arenaHeight - this.height);
-
-    // Dash Cooldown Gauge
-    const dashCooldownEl = document.getElementById('dash-cooldown');
-    if (this.player.dashCooldown > 0) {
-      dashCooldownEl.classList.remove('hidden');
-      dashCooldownEl.innerText = `${Math.ceil(this.player.dashCooldown)}s`;
-    } else {
-      dashCooldownEl.classList.add('hidden');
-    }
-
-    // Active PowerUp Indicator Bar
+    // Active PowerUp HUD Bar Countdown
     if (this.activePowerUp) {
       this.activePowerUp.timer -= dt;
-      const fillBar = document.getElementById('powerup-bar-fill');
-      fillBar.style.width = `${Math.max(0, (this.activePowerUp.timer / this.activePowerUp.duration) * 100)}%`;
+      const fill = document.getElementById('powerup-bar-fill');
+      if (fill) {
+        const pct = Math.max(0, (this.activePowerUp.timer / this.activePowerUp.duration) * 100);
+        fill.style.width = `${pct}%`;
+      }
       if (this.activePowerUp.timer <= 0) {
         this.activePowerUp = null;
         document.getElementById('powerup-indicator').classList.add('hidden');
       }
     }
 
-    // Proximity Effects & Screams
+    // Virtual Joystick Movement
+    let inputVector = { x: 0, y: 0 };
+    if (window.joystickManager) {
+      inputVector = window.joystickManager.getVector();
+    }
+
+    // Keyboard Fallback (WASD / Arrows)
+    if (inputVector.x === 0 && inputVector.y === 0) {
+      if (window.joystickManager.keys.ArrowLeft || window.joystickManager.keys.KeyA) inputVector.x -= 1;
+      if (window.joystickManager.keys.ArrowRight || window.joystickManager.keys.KeyD) inputVector.x += 1;
+      if (window.joystickManager.keys.ArrowUp || window.joystickManager.keys.KeyW) inputVector.y -= 1;
+      if (window.joystickManager.keys.ArrowDown || window.joystickManager.keys.KeyS) inputVector.y += 1;
+
+      if (inputVector.x !== 0 && inputVector.y !== 0) {
+        const len = Math.hypot(inputVector.x, inputVector.y);
+        inputVector.x /= len;
+        inputVector.y /= len;
+      }
+    }
+
+    // Update Entities
+    if (this.player) {
+      this.player.update(dt, inputVector, this.arenaWidth, this.arenaHeight, this.obstacles, this.doors);
+
+      // Smooth Camera Tracking (Centered on Player)
+      this.camera.x = this.player.x - this.width / 2;
+      this.camera.y = this.player.y - this.height / 2;
+
+      this.camera.x = Math.min(Math.max(this.camera.x, 0), this.arenaWidth - this.width);
+      this.camera.y = Math.min(Math.max(this.camera.y, 0), this.arenaHeight - this.height);
+    }
+
+    if (this.kenan) {
+      this.kenan.update(dt, this.player.x, this.player.y, this.arenaWidth, this.arenaHeight, this.obstacles, this.doors, this.particles);
+    }
+
+    this.clones.forEach(c => c.update(dt, this.arenaWidth, this.arenaHeight, this.obstacles));
+    this.speedPads.forEach(sp => sp.update(dt));
+    this.powerUps.forEach(pu => pu.update(dt));
+    this.storyItems.forEach(item => item.update(dt, this.player.x, this.player.y, this.arenaWidth, this.arenaHeight));
+    this.collectibleSlippers.forEach(slp => slp.update(dt));
+    this.slippers.forEach(slp => slp.update(dt));
+    if (this.exitGate) this.exitGate.update(dt, this.player.x, this.player.y, this.arenaWidth, this.arenaHeight);
+
+    // Pushable Crates Collisions & Push Logic
+    this.pushableCrates.forEach(crate => {
+      const dist = Math.hypot(this.player.x - crate.x, this.player.y - crate.y);
+      if (dist < (this.player.radius + crate.radius)) {
+        const dx = (crate.x - this.player.x) / dist;
+        const dy = (crate.y - this.player.y) / dist;
+        crate.push(dx * dt, dy * dt, this.obstacles, this.arenaWidth, this.arenaHeight);
+      }
+    });
+
+    // Proximity Heartbeat Audio Feedback & Haptics
     const distToKenan = Math.hypot(this.player.x - this.kenan.x, this.player.y - this.kenan.y);
     const maxDiag = Math.hypot(this.arenaWidth, this.arenaHeight);
     const now = performance.now();
 
-    window.audioManager.updateProximity(distToKenan, maxDiag * 0.5, this.rageTriggered);
+    window.soundEffectsManager.updateProximityHeartbeat(distToKenan, maxDiag * 0.5, now);
     window.hapticsManager.updateProximity(distToKenan, maxDiag * 0.5, now);
 
     if (distToKenan < 130) {
@@ -807,6 +779,103 @@ class Game {
     if (distToKenan < (this.player.radius + this.kenan.radius - 8)) {
       this.gameOver();
       return;
+    }
+
+    // Collisions: Thrown Slippers vs Kenan
+    for (let i = this.slippers.length - 1; i >= 0; i--) {
+      const slp = this.slippers[i];
+      const dist = Math.hypot(this.kenan.x - slp.x, this.kenan.y - slp.y);
+      if (dist < (this.kenan.radius + slp.radius)) {
+        this.slippers.splice(i, 1);
+        
+        // Spawn Hit Sparks
+        for (let k = 0; k < 12; k++) {
+          this.particles.push(new window.Entities.Particle(
+            this.kenan.x, this.kenan.y,
+            (Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200,
+            '#ffcc00', 7, 0.4
+          ));
+        }
+
+        window.soundEffectsManager.playBossHitSound();
+        window.hapticsManager.triggerImpact();
+
+        if (this.kenan.isBoss) {
+          this.kenan.bossHp -= 10;
+          this.updateBossHpBar();
+          this.kenan.freeze(0.8);
+          if (this.kenan.bossHp <= 0) {
+            this.completeStoryStage();
+            return;
+          }
+        } else {
+          // Stun & Freeze Normal Kenan for 1.5s
+          this.kenan.freeze(1.5);
+        }
+      }
+    }
+
+    // Collisions: Player vs Ground Collectible Slippers
+    this.collectibleSlippers.forEach(slp => {
+      if (!slp.isCollected) {
+        const dist = Math.hypot(this.player.x - slp.x, this.player.y - slp.y);
+        if (dist < (this.player.radius + slp.radius)) {
+          slp.isCollected = true;
+          this.player.slippers++;
+          this.updateSlipperHudBadge();
+          window.hapticsManager.triggerTac();
+
+          // Respawn slipper in Stage 10 Boss Fight continuously!
+          if (this.currentStageId === 10) {
+            setTimeout(() => {
+              slp.x = 150 + Math.random() * (this.arenaWidth - 300);
+              slp.y = 150 + Math.random() * (this.arenaHeight - 300);
+              slp.isCollected = false;
+            }, 3500);
+          }
+        }
+      }
+    });
+
+    // Collisions: Story Item Collection
+    if (this.gameMode === 'STORY' && this.stageItemsTotal > 0) {
+      this.storyItems.forEach(item => {
+        if (!item.isCollected) {
+          const dist = Math.hypot(this.player.x - item.x, this.player.y - item.y);
+          if (dist < (this.player.radius + item.radius)) {
+            item.isCollected = true;
+            this.stageItemsCollected++;
+            
+            document.getElementById('objective-count-badge').innerText = `${this.stageItemsCollected}/${this.stageItemsTotal}`;
+            window.hapticsManager.triggerTac();
+
+            // Unlock Exit Gate Portal when all items collected!
+            if (this.stageItemsCollected >= this.stageItemsTotal) {
+              if (this.exitGate) this.exitGate.isOpen = true;
+              document.getElementById('objective-text').innerText = "🚪 البوابة انفتحت! اهرب إلى بوابة الخروج الآن!";
+              document.getElementById('objective-count-badge').innerText = "🚪";
+              window.soundEffectsManager.playDoorBreakSound();
+
+              for (let k = 0; k < 25; k++) {
+                this.particles.push(new window.Entities.Particle(
+                  this.exitGate.x, this.exitGate.y,
+                  (Math.random() - 0.5) * 180, (Math.random() - 0.5) * 180,
+                  '#00ff88', 7, 0.8
+                ));
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Collisions: Player vs Exit Gate Portal
+    if (this.gameMode === 'STORY' && this.exitGate && this.exitGate.isOpen) {
+      const distToExit = Math.hypot(this.player.x - this.exitGate.x, this.player.y - this.exitGate.y);
+      if (distToExit < (this.player.radius + this.exitGate.radius)) {
+        this.completeStoryStage();
+        return;
+      }
     }
 
     // Collisions: Kenan vs Banana Traps
@@ -862,6 +931,12 @@ class Game {
         }
       }
     });
+
+    // Particles Update
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      this.particles[i].update(dt);
+      if (this.particles[i].life <= 0) this.particles.splice(i, 1);
+    }
   }
 
   drawStageBackground() {
@@ -889,7 +964,9 @@ class Game {
     this.pushableCrates.forEach(cr => cr.draw(this.ctx));
     this.bananaTraps.forEach(bt => bt.draw(this.ctx));
     this.storyItems.forEach(item => item.draw(this.ctx));
+    this.collectibleSlippers.forEach(slp => slp.draw(this.ctx));
     this.slippers.forEach(slp => slp.draw(this.ctx));
+    if (this.gameMode === 'STORY' && this.exitGate) this.exitGate.draw(this.ctx);
     this.powerUps.forEach(pu => pu.draw(this.ctx));
     this.particles.forEach(p => p.draw(this.ctx));
     this.clones.forEach(clone => clone.draw(this.ctx));
@@ -930,7 +1007,7 @@ class Game {
       const ry = (this.camera.y + Math.random() * this.height);
       this.ctx.beginPath();
       this.ctx.moveTo(rx, ry);
-      this.ctx.lineTo(rx - 8, ry + 22);
+      this.ctx.lineTo(rx - 10, ry + 25);
       this.ctx.stroke();
     }
     this.ctx.restore();
@@ -986,6 +1063,14 @@ class Game {
       mctx.arc(item.x * scaleX, item.y * scaleY, 2.5, 0, Math.PI * 2);
       mctx.fill();
     });
+
+    // Exit Gate Portal on Minimap
+    if (this.gameMode === 'STORY' && this.exitGate) {
+      mctx.fillStyle = this.exitGate.isOpen ? '#00ff88' : '#888888';
+      mctx.beginPath();
+      mctx.arc(this.exitGate.x * scaleX, this.exitGate.y * scaleY, 4.5, 0, Math.PI * 2);
+      mctx.fill();
+    }
 
     if (this.player) {
       mctx.fillStyle = '#00ff88';
