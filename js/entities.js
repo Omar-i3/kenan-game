@@ -1292,7 +1292,7 @@ class SlipperProjectile {
     ctx.rotate(this.angle);
 
     const slpImg = ASSET_IMAGES['slipper'];
-    if (slpImg && slpImg.complete && slpImg naturalWidth > 0) {
+    if (slpImg && slpImg.complete && slpImg.naturalWidth > 0) {
       ctx.shadowColor = '#ffcc00';
       ctx.shadowBlur = 15;
       const sSize = this.radius * 2.8;

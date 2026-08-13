@@ -112,23 +112,18 @@ class Game {
     window.addEventListener('orientationchange', checkOrientation);
     checkOrientation();
 
-    // Fast & Reliable Button Binder (click + touchend)
+    // Ultra Reliable Button Binder (onclick)
     const bindBtn = (id, handler) => {
       const el = document.getElementById(id);
       if (!el) return;
       let lastTime = 0;
-      const fn = (e) => {
+      el.onclick = (e) => {
         const now = Date.now();
-        if (now - lastTime < 200) return;
+        if (now - lastTime < 250) return;
         lastTime = now;
         window.audioManager.unlockAudio();
         handler(e);
       };
-      el.addEventListener('click', fn);
-      el.addEventListener('touchend', (e) => {
-        if (e.cancelable) e.preventDefault();
-        fn(e);
-      });
     };
 
     // Mode Toggle Buttons (Endless vs Story Mode)
@@ -161,11 +156,10 @@ class Game {
     const diffBtns = document.querySelectorAll('.diff-btn');
     diffBtns.forEach(btn => {
       let lastTime = 0;
-      const handler = (e) => {
+      btn.onclick = (e) => {
         const now = Date.now();
-        if (now - lastTime < 200) return;
+        if (now - lastTime < 250) return;
         lastTime = now;
-        if (e && e.stopPropagation) e.stopPropagation();
         window.audioManager.unlockAudio();
         diffBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
@@ -173,11 +167,6 @@ class Game {
         this.updateHighScoreDisplay();
         window.hapticsManager.triggerTac();
       };
-      btn.addEventListener('click', handler);
-      btn.addEventListener('touchend', (e) => {
-        if (e.cancelable) e.preventDefault();
-        handler(e);
-      });
     });
 
     bindBtn('start-btn', () => {
@@ -255,21 +244,15 @@ class Game {
     const audioBtn = document.getElementById('audio-toggle-btn');
     if (audioBtn) {
       let lastTime = 0;
-      const handler = (e) => {
+      audioBtn.onclick = (e) => {
         const now = Date.now();
-        if (now - lastTime < 200) return;
+        if (now - lastTime < 250) return;
         lastTime = now;
-        if (e && e.stopPropagation) e.stopPropagation();
         window.audioManager.unlockAudio();
         const isMuted = window.audioManager.toggleMute();
         audioBtn.innerText = isMuted ? '🔇 الصوت: مكتوم' : '🔊 الصوت: مفعّل';
         window.hapticsManager.triggerTac();
       };
-      audioBtn.addEventListener('click', handler);
-      audioBtn.addEventListener('touchend', (e) => {
-        if (e.cancelable) e.preventDefault();
-        handler(e);
-      });
     }
   }
 
@@ -298,19 +281,13 @@ class Game {
 
       if (isUnlocked) {
         let cardLastTime = 0;
-        const playStage = (e) => {
+        card.onclick = (e) => {
           const now = Date.now();
-          if (now - cardLastTime < 200) return;
+          if (now - cardLastTime < 250) return;
           cardLastTime = now;
-          if (e && e.stopPropagation) e.stopPropagation();
           window.audioManager.unlockAudio();
           this.startStoryStage(stg.id);
         };
-        card.addEventListener('click', playStage);
-        card.addEventListener('touchend', (e) => {
-          if (e.cancelable) e.preventDefault();
-          playStage(e);
-        });
       }
 
       grid.appendChild(card);

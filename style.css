@@ -180,7 +180,8 @@ canvas#gameCanvas {
 .screen-overlay.hidden {
   opacity: 0;
   visibility: hidden;
-  pointer-events: none;
+  pointer-events: none !important;
+  display: none !important;
 }
 
 /* UI Panel Glassmorphism */
