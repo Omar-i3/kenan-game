@@ -20,9 +20,17 @@ class SoundEffectsManager {
 
       this.hitAudio = new Audio('./kenan_hit.mp3');
       this.hitAudio.preload = 'auto';
+      this.hitAudio.onerror = () => {
+        this.hitAudio.src = './assets/kenan_hit.mp3';
+        this.hitAudio.load();
+      };
 
       this.deadAudio = new Audio('./kenan_dead.mp3');
       this.deadAudio.preload = 'auto';
+      this.deadAudio.onerror = () => {
+        this.deadAudio.src = './assets/kenan_dead.mp3';
+        this.deadAudio.load();
+      };
     } catch (e) {}
   }
 

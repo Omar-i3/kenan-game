@@ -583,7 +583,8 @@ class Game {
   gameOver() {
     this.state = 'GAMEOVER';
 
-    const voiceOptions = ['w7sh', 'voice_warak', 'voice_jayak', 'voice_mafer'];
+    window.audioManager.playImpact();
+    const voiceOptions = ['w7sh', 'voice_warak', 'voice_jayak', 'voice_mafer', 'voice_sadtak', 'voice_akaltak'];
     const selectedVoice = voiceOptions[Math.floor(Math.random() * voiceOptions.length)];
     window.audioManager.playVoice(selectedVoice);
     window.audioManager.stopChase();

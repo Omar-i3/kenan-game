@@ -11,7 +11,8 @@ const VOICE_FILES = {
   voice_wagaf: './voice_wagaf.mp3',
   voice_assabt: './voice_assabt.mp3',
   voice_sadtak: './voice_sadtak.mp3',
-  voice_akaltak: './voice_akaltak.mp3'
+  voice_akaltak: './voice_akaltak.mp3',
+  w7sh: './w7sh.mp3'
 };
 
 class AudioManager {
@@ -48,16 +49,28 @@ class AudioManager {
       this.chaseAudio = new Audio('./3ooo.mp3');
       this.chaseAudio.loop = true;
       this.chaseAudio.preload = 'auto';
+      this.chaseAudio.onerror = () => {
+        this.chaseAudio.src = './assets/3ooo.mp3';
+        this.chaseAudio.load();
+      };
       this.chaseAudio.load();
 
       this.impactAudio = new Audio('./w7sh.mp3');
       this.impactAudio.preload = 'auto';
+      this.impactAudio.onerror = () => {
+        this.impactAudio.src = './assets/w7sh.mp3';
+        this.impactAudio.load();
+      };
       this.impactAudio.load();
 
       // Preload all voice clips instantly
       for (const [key, path] of Object.entries(VOICE_FILES)) {
         const aud = new Audio(path);
         aud.preload = 'auto';
+        aud.onerror = () => {
+          aud.src = './assets/' + path.replace('./', '');
+          aud.load();
+        };
         aud.load();
         this.voiceAudioMap[key] = aud;
       }
@@ -92,6 +105,11 @@ class AudioManager {
     }
     if (this.impactAudio && this.impactAudio.readyState < 2) {
       this.impactAudio.load();
+    }
+    for (const aud of Object.values(this.voiceAudioMap)) {
+      if (aud && aud.readyState < 2) {
+        aud.load();
+      }
     }
   }
 

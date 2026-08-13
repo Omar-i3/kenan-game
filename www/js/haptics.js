@@ -17,6 +17,14 @@ class HapticsManager {
     } catch (e) {}
   }
 
+  // Jumpscare pulse vibration
+  triggerJumpscare() {
+    if (!this.hasVibration || !this.isEnabled) return;
+    try {
+      navigator.vibrate([150, 50, 200, 50, 500]);
+    } catch (e) {}
+  }
+
   // Light vibration on powerup pickup or UI tap
   triggerTac() {
     if (!this.hasVibration || !this.isEnabled) return;
