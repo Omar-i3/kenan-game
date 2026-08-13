@@ -171,10 +171,14 @@ class AudioManager {
 
   applyCurrentVolume() {
     const finalVolume = this.baseVolume * this.voiceDuckingMultiplier;
-    if (this.chaseGainNode) {
-      this.chaseGainNode.gain.setTargetAtTime(finalVolume, this.audioContext.currentTime, 0.05);
-    } else if (this.chaseAudio) {
-      this.chaseAudio.volume = finalVolume;
+    try {
+      if (this.chaseGainNode && this.audioContext && this.audioContext.currentTime !== undefined) {
+        this.chaseGainNode.gain.setTargetAtTime(finalVolume, this.audioContext.currentTime, 0.05);
+      } else if (this.chaseAudio) {
+        this.chaseAudio.volume = finalVolume;
+      }
+    } catch (e) {
+      if (this.chaseAudio) this.chaseAudio.volume = finalVolume;
     }
   }
 

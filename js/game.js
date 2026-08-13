@@ -120,9 +120,10 @@ class Game {
       let lastTime = 0;
       const fn = (e) => {
         const now = Date.now();
-        if (now - lastTime < 300) return;
+        if (now - lastTime < 250) return;
         lastTime = now;
-        window.audioManager.unlockAudio();
+        if (window.audioManager) window.audioManager.unlockAudio();
+        if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
         handler(e);
       };
 
@@ -730,9 +731,18 @@ class Game {
       inputVector = window.joystickController.getVector();
     }
 
-    // Update Entities
+    // Update Entities & Dash Cooldown HUD Badge
     if (this.player) {
       this.player.update(dt, inputVector, this.arenaWidth, this.arenaHeight, this.obstacles, this.doors);
+      const dashCd = document.getElementById('dash-cooldown');
+      if (dashCd) {
+        if (this.player.dashCooldown > 0) {
+          dashCd.classList.remove('hidden');
+          dashCd.innerText = `${Math.ceil(this.player.dashCooldown)}s`;
+        } else {
+          dashCd.classList.add('hidden');
+        }
+      }
     }
 
     if (this.kenan) {
@@ -762,8 +772,12 @@ class Game {
     const maxDiag = Math.hypot(this.arenaWidth, this.arenaHeight);
     const now = performance.now();
 
-    window.soundEffectsManager.updateProximityHeartbeat(distToKenan, maxDiag * 0.5, now);
-    window.hapticsManager.updateProximity(distToKenan, maxDiag * 0.5, now);
+    if (window.audioManager) {
+      window.audioManager.updateProximity(distToKenan, maxDiag * 0.5, this.rageTriggered);
+    }
+    if (window.hapticsManager) {
+      window.hapticsManager.updateProximity(distToKenan, maxDiag * 0.5, now);
+    }
 
     if (distToKenan < 130) {
       window.soundEffectsManager.playPanicVoice();
