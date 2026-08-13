@@ -1,16 +1,45 @@
 /**
  * Sound Effects & Voice Synthesizer for Monster Kenan Expansion
- * Shares AudioContext from AudioManager. Uses preloaded AudioBuffers for kenan_hit & kenan_dead.
- * All other SFX use Web Audio API oscillator synthesis (zero-latency, Android compatible).
+ * Shares AudioContext from AudioManager. Uses HTML5 Audio for kenan_hit & kenan_dead.
+ * All other SFX use Web Audio API oscillator synthesis (zero-latency).
  */
 class SoundEffectsManager {
   constructor() {
     this.lastPanicTime = 0;
+    this.hitAudio = null;
+    this.deadAudio = null;
+    this._allAudioElements = [];
+    this._unlocked = false;
+    this._init();
+  }
+
+  _init() {
+    // Create & preload boss sound effects
+    this.hitAudio = this._createAudio('./kenan_hit.mp3');
+    this.deadAudio = this._createAudio('./kenan_dead.mp3');
+  }
+
+  _createAudio(path) {
+    const audio = new Audio();
+    audio.preload = 'auto';
+    audio._triedAsset = false;
+    audio.src = path;
+
+    audio.onerror = () => {
+      if (!audio._triedAsset) {
+        audio._triedAsset = true;
+        audio.src = './assets/' + path.replace('./', '');
+        audio.load();
+      }
+    };
+
+    audio.load();
+    this._allAudioElements.push(audio);
+    return audio;
   }
 
   /**
-   * Get shared AudioContext from AudioManager (single context for entire app).
-   * Falls back to creating own context if AudioManager not ready yet.
+   * Get shared AudioContext from AudioManager.
    */
   _getContext() {
     if (window.audioManager && window.audioManager.audioContext) {
@@ -19,39 +48,47 @@ class SoundEffectsManager {
     return null;
   }
 
-  /**
-   * Get the master gain node from AudioManager for routing.
-   */
-  _getDestination() {
-    if (window.audioManager && window.audioManager.masterGain) {
-      return window.audioManager.masterGain;
-    }
-    const ctx = this._getContext();
-    return ctx ? ctx.destination : null;
-  }
-
   unlock() {
-    // AudioContext resumption is handled by AudioManager.unlockAudio()
-    if (window.audioManager) {
-      // Ensure context exists
-      if (!window.audioManager.audioContext) {
-        window.audioManager._initContext();
-      }
-      if (window.audioManager.audioContext && window.audioManager.audioContext.state === 'suspended') {
-        window.audioManager.audioContext.resume().catch(() => {});
-      }
+    // Resume shared AudioContext
+    const ctx = this._getContext();
+    if (ctx && ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    // Pre-warm HTML5 Audio elements on first gesture
+    if (!this._unlocked) {
+      this._unlocked = true;
+      this._allAudioElements.forEach(audio => {
+        try {
+          audio.volume = 0;
+          const p = audio.play();
+          if (p !== undefined) {
+            p.then(() => {
+              audio.pause();
+              audio.currentTime = 0;
+              audio.volume = 1.0;
+            }).catch(() => {
+              audio.volume = 1.0;
+            });
+          } else {
+            audio.pause();
+            audio.currentTime = 0;
+            audio.volume = 1.0;
+          }
+        } catch (e) {
+          audio.volume = 1.0;
+        }
+      });
     }
   }
 
   // ─── Comical Panic Voice Scream when Kenan is extremely close (<130px) ───
   playPanicVoice() {
-    this.unlock();
     const ctx = this._getContext();
-    const dest = this._getDestination();
-    if (!ctx || !dest) return;
+    if (!ctx) return;
 
     const now = performance.now();
-    if (now - this.lastPanicTime < 2500) return; // Cooldown between screams
+    if (now - this.lastPanicTime < 2500) return;
     this.lastPanicTime = now;
 
     try {
@@ -67,7 +104,7 @@ class SoundEffectsManager {
       gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
 
       osc.connect(gain);
-      gain.connect(dest);
+      gain.connect(ctx.destination);
 
       osc.start();
       osc.stop(ctx.currentTime + 0.4);
@@ -76,10 +113,8 @@ class SoundEffectsManager {
 
   // ─── Dash Skill Burst SFX ───
   playDashSound() {
-    this.unlock();
     const ctx = this._getContext();
-    const dest = this._getDestination();
-    if (!ctx || !dest) return;
+    if (!ctx) return;
 
     try {
       const osc = ctx.createOscillator();
@@ -93,7 +128,7 @@ class SoundEffectsManager {
       gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
 
       osc.connect(gain);
-      gain.connect(dest);
+      gain.connect(ctx.destination);
 
       osc.start();
       osc.stop(ctx.currentTime + 0.2);
@@ -102,10 +137,8 @@ class SoundEffectsManager {
 
   // ─── Banana Slip Whistle SFX ───
   playBananaSlipSound() {
-    this.unlock();
     const ctx = this._getContext();
-    const dest = this._getDestination();
-    if (!ctx || !dest) return;
+    if (!ctx) return;
 
     try {
       const osc = ctx.createOscillator();
@@ -119,7 +152,7 @@ class SoundEffectsManager {
       gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
 
       osc.connect(gain);
-      gain.connect(dest);
+      gain.connect(ctx.destination);
 
       osc.start();
       osc.stop(ctx.currentTime + 0.4);
@@ -128,10 +161,8 @@ class SoundEffectsManager {
 
   // ─── Teleport Warp SFX ───
   playTeleportSound() {
-    this.unlock();
     const ctx = this._getContext();
-    const dest = this._getDestination();
-    if (!ctx || !dest) return;
+    if (!ctx) return;
 
     try {
       const osc = ctx.createOscillator();
@@ -145,7 +176,7 @@ class SoundEffectsManager {
       gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
 
       osc.connect(gain);
-      gain.connect(dest);
+      gain.connect(ctx.destination);
 
       osc.start();
       osc.stop(ctx.currentTime + 0.3);
@@ -154,10 +185,8 @@ class SoundEffectsManager {
 
   // ─── Door Break Wood Crunch SFX ───
   playDoorBreakSound() {
-    this.unlock();
     const ctx = this._getContext();
-    const dest = this._getDestination();
-    if (!ctx || !dest) return;
+    if (!ctx) return;
 
     try {
       const osc = ctx.createOscillator();
@@ -171,29 +200,29 @@ class SoundEffectsManager {
       gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
 
       osc.connect(gain);
-      gain.connect(dest);
+      gain.connect(ctx.destination);
 
       osc.start();
       osc.stop(ctx.currentTime + 0.3);
     } catch (e) {}
   }
 
-  // ─── Giant Kenan Boss Hit SFX (preloaded kenan_hit buffer or synth fallback) ───
+  // ─── Giant Kenan Boss Hit SFX ───
   playBossHitSound() {
-    this.unlock();
-    // Try preloaded buffer from AudioManager
-    if (window.audioManager && window.audioManager.buffers.kenan_hit) {
-      const result = window.audioManager._playBuffer('kenan_hit', { volume: 1.0 });
-      if (result) return;
+    if (this.hitAudio) {
+      try { this.hitAudio.currentTime = 0; } catch (e) {}
+      const p = this.hitAudio.play();
+      if (p !== undefined) {
+        p.catch(() => this.playSynthBossHit());
+      }
+    } else {
+      this.playSynthBossHit();
     }
-    this.playSynthBossHit();
   }
 
   playSynthBossHit() {
-    this.unlock();
     const ctx = this._getContext();
-    const dest = this._getDestination();
-    if (!ctx || !dest) return;
+    if (!ctx) return;
 
     try {
       const osc = ctx.createOscillator();
@@ -207,29 +236,29 @@ class SoundEffectsManager {
       gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
 
       osc.connect(gain);
-      gain.connect(dest);
+      gain.connect(ctx.destination);
 
       osc.start();
       osc.stop(ctx.currentTime + 0.25);
     } catch (e) {}
   }
 
-  // ─── Giant Kenan Boss Death SFX (preloaded kenan_dead buffer or synth fallback) ───
+  // ─── Giant Kenan Boss Death SFX ───
   playBossDeadSound() {
-    this.unlock();
-    // Try preloaded buffer from AudioManager
-    if (window.audioManager && window.audioManager.buffers.kenan_dead) {
-      const result = window.audioManager._playBuffer('kenan_dead', { volume: 1.0 });
-      if (result) return;
+    if (this.deadAudio) {
+      try { this.deadAudio.currentTime = 0; } catch (e) {}
+      const p = this.deadAudio.play();
+      if (p !== undefined) {
+        p.catch(() => this.playSynthBossDead());
+      }
+    } else {
+      this.playSynthBossDead();
     }
-    this.playSynthBossDead();
   }
 
   playSynthBossDead() {
-    this.unlock();
     const ctx = this._getContext();
-    const dest = this._getDestination();
-    if (!ctx || !dest) return;
+    if (!ctx) return;
 
     try {
       const osc = ctx.createOscillator();
@@ -243,7 +272,7 @@ class SoundEffectsManager {
       gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1.2);
 
       osc.connect(gain);
-      gain.connect(dest);
+      gain.connect(ctx.destination);
 
       osc.start();
       osc.stop(ctx.currentTime + 1.2);

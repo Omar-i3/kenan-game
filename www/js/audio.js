@@ -1,28 +1,22 @@
 /**
- * Audio Manager for Monster Kenan Game — Mobile-First Web Audio API Engine
- * Uses AudioBuffer preloading for zero-latency, Capacitor/Android compatible playback.
- * No HTML5 Audio elements — all sounds decoded into Web Audio API buffers.
+ * Audio Manager for Monster Kenan Game — Hybrid Mobile-First Engine
+ * Uses HTML5 Audio (instant, reliable) + Web Audio API synth fallback.
+ * All audio elements are pre-warmed on first user gesture for Android/Capacitor.
  */
 
-// ─── Sound Manifest ───
-const SOUND_MANIFEST = {
-  chase:          './3ooo.mp3',
-  impact:         './w7sh.mp3',
-  voice_warak:    './voice_warak.mp3',
-  voice_ray7:     './voice_ray7.mp3',
-  voice_jwal:     './voice_jwal.mp3',
-  voice_mafer:    './voice_mafer.mp3',
-  voice_jayak:    './voice_jayak.mp3',
-  voice_wagaf:    './voice_wagaf.mp3',
-  voice_assabt:   './voice_assabt.mp3',
-  voice_sadtak:   './voice_sadtak.mp3',
-  voice_akaltak:  './voice_akaltak.mp3',
-  kenan_hit:      './kenan_hit.mp3',
-  kenan_dead:     './kenan_dead.mp3'
+// ─── Sound File Paths ───
+const VOICE_FILES = {
+  voice_warak:   './voice_warak.mp3',
+  voice_ray7:    './voice_ray7.mp3',
+  voice_jwal:    './voice_jwal.mp3',
+  voice_mafer:   './voice_mafer.mp3',
+  voice_jayak:   './voice_jayak.mp3',
+  voice_wagaf:   './voice_wagaf.mp3',
+  voice_assabt:  './voice_assabt.mp3',
+  voice_sadtak:  './voice_sadtak.mp3',
+  voice_akaltak: './voice_akaltak.mp3',
+  w7sh:          './w7sh.mp3'
 };
-
-// Fallback paths (try ./assets/ if root fails)
-const ASSET_FALLBACK_PREFIX = './assets/';
 
 class AudioManager {
   constructor() {
@@ -30,141 +24,126 @@ class AudioManager {
     this.isMuted = false;
     this.isPlayingChase = false;
     this.isLoaded = false;
-
-    // AudioBuffer cache: key → AudioBuffer
-    this.buffers = {};
-
-    // Active source nodes for stoppable sounds
-    this.chaseSource = null;
-    this.chaseGain = null;
-    this.currentVoiceSource = null;
-    this.currentVoiceGain = null;
-
-    // Master gain
-    this.masterGain = null;
+    this._unlocked = false;
 
     // Volume state
     this.baseVolume = 1.0;
     this.voiceDuckingMultiplier = 1.0;
 
-    // Synth fallback state (if all preloading fails)
+    // HTML5 Audio elements
+    this.chaseAudio = null;
+    this.impactAudio = null;
+    this.voiceAudioMap = {};
+    this.currentVoiceAudio = null;
+
+    // All audio elements for bulk unlock
+    this._allAudioElements = [];
+
+    // Synth fallback state
     this.synthOscillator = null;
     this.synthGain = null;
     this.isUsingSynth = false;
 
-    // Chase playback rate
-    this._chasePlaybackRate = 1.0;
-
-    this._initContext();
+    this._init();
   }
 
-  _initContext() {
+  _init() {
+    // Create shared AudioContext
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (AudioCtx) {
         this.audioContext = new AudioCtx();
-        this.masterGain = this.audioContext.createGain();
-        this.masterGain.connect(this.audioContext.destination);
       }
-    } catch (err) {
-      console.warn('[AudioManager] AudioContext init failed:', err);
-    }
-  }
+    } catch (e) {}
 
-  /**
-   * Preload all sounds from SOUND_MANIFEST into AudioBuffers.
-   * Call once on first user interaction or at game start.
-   * Returns a Promise that resolves when all sounds are loaded (or failed gracefully).
-   */
-  async preloadSounds() {
-    if (this.isLoaded) return;
-    this.unlockAudio();
+    // Create & preload chase audio
+    this.chaseAudio = this._createAudio('./3ooo.mp3', true);
+    this.chaseAudio.loop = true;
 
-    if (!this.audioContext) {
-      console.warn('[AudioManager] No AudioContext — cannot preload');
-      return;
+    // Create & preload impact audio
+    this.impactAudio = this._createAudio('./w7sh.mp3', true);
+
+    // Create & preload all voice clips
+    for (const [key, path] of Object.entries(VOICE_FILES)) {
+      this.voiceAudioMap[key] = this._createAudio(path, true);
     }
 
-    const loadPromises = Object.entries(SOUND_MANIFEST).map(async ([key, path]) => {
-      try {
-        let buffer = await this._fetchAndDecode(path);
-        if (!buffer) {
-          // Try fallback path
-          const fallbackPath = ASSET_FALLBACK_PREFIX + path.replace('./', '');
-          buffer = await this._fetchAndDecode(fallbackPath);
-        }
-        if (buffer) {
-          this.buffers[key] = buffer;
-        } else {
-          console.warn(`[AudioManager] Failed to load sound: ${key}`);
-        }
-      } catch (err) {
-        console.warn(`[AudioManager] Error loading ${key}:`, err);
-      }
-    });
-
-    await Promise.all(loadPromises);
     this.isLoaded = true;
-    console.log(`[AudioManager] Preloaded ${Object.keys(this.buffers).length}/${Object.keys(SOUND_MANIFEST).length} sounds`);
   }
 
   /**
-   * Fetch an audio file and decode it into an AudioBuffer.
-   * Returns null on failure (no throw).
+   * Create an Audio element with preload, fallback path, and tracking.
    */
-  async _fetchAndDecode(url) {
-    try {
-      const response = await fetch(url);
-      if (!response.ok) return null;
-      const arrayBuffer = await response.arrayBuffer();
-      const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
-      return audioBuffer;
-    } catch (e) {
-      return null;
+  _createAudio(path, addToPool = true) {
+    const audio = new Audio();
+    audio.preload = 'auto';
+    audio._originalPath = path;
+    audio._triedAsset = false;
+
+    // Try loading from root path first
+    audio.src = path;
+
+    audio.onerror = () => {
+      if (!audio._triedAsset) {
+        audio._triedAsset = true;
+        audio.src = './assets/' + path.replace('./', '');
+        audio.load();
+      }
+    };
+
+    audio.load();
+
+    if (addToPool) {
+      this._allAudioElements.push(audio);
     }
+
+    return audio;
   }
 
   /**
-   * Play a preloaded buffer by key. Returns the source node (or null).
-   * Options: loop, volume, playbackRate
+   * Unlock all audio on first user gesture.
+   * On Android/iOS, audio elements must receive a play() call inside a user gesture
+   * before they can play programmatically later.
    */
-  _playBuffer(key, { loop = false, volume = 1.0, playbackRate = 1.0 } = {}) {
-    if (this.isMuted || !this.audioContext || !this.buffers[key]) return null;
-
-    try {
-      const source = this.audioContext.createBufferSource();
-      const gainNode = this.audioContext.createGain();
-
-      source.buffer = this.buffers[key];
-      source.loop = loop;
-      source.playbackRate.value = playbackRate;
-      gainNode.gain.value = volume;
-
-      source.connect(gainNode);
-      gainNode.connect(this.masterGain);
-
-      source.start(0);
-      return { source, gainNode };
-    } catch (e) {
-      console.warn(`[AudioManager] Playback error for ${key}:`, e);
-      return null;
-    }
-  }
-
-  // ─── Ensure AudioContext is resumed after user interaction ───
   unlockAudio() {
+    // Resume AudioContext
     if (!this.audioContext) {
-      this._initContext();
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) this.audioContext = new AudioCtx();
+      } catch (e) {}
     }
     if (this.audioContext && this.audioContext.state === 'suspended') {
       this.audioContext.resume().catch(() => {});
     }
-    // Trigger preload on first unlock if not yet loaded
-    if (!this.isLoaded && !this._preloadStarted) {
-      this._preloadStarted = true;
-      this.preloadSounds();
+
+    // Pre-warm all Audio elements (only once)
+    if (!this._unlocked) {
+      this._unlocked = true;
+      this._allAudioElements.forEach(audio => {
+        try {
+          audio.volume = 0;
+          const p = audio.play();
+          if (p !== undefined) {
+            p.then(() => {
+              audio.pause();
+              audio.currentTime = 0;
+              audio.volume = 1.0;
+            }).catch(() => {
+              audio.volume = 1.0;
+            });
+          } else {
+            audio.pause();
+            audio.currentTime = 0;
+            audio.volume = 1.0;
+          }
+        } catch (e) {
+          audio.volume = 1.0;
+        }
+      });
     }
-    // Share context with SoundEffectsManager
+
+    // Share unlock with SoundEffectsManager
     if (window.soundEffectsManager) {
       window.soundEffectsManager.unlock();
     }
@@ -176,19 +155,19 @@ class AudioManager {
     this.unlockAudio();
     this.isPlayingChase = true;
 
-    // Stop any existing chase
-    this._stopChaseSource();
-
-    if (this.buffers.chase) {
-      const result = this._playBuffer('chase', {
-        loop: true,
-        volume: this.baseVolume * this.voiceDuckingMultiplier,
-        playbackRate: this._chasePlaybackRate
-      });
-      if (result) {
-        this.chaseSource = result.source;
-        this.chaseGain = result.gainNode;
-      } else {
+    if (this.chaseAudio) {
+      try {
+        this.chaseAudio.currentTime = 0;
+        this.chaseAudio.playbackRate = 1.0;
+        this.applyCurrentVolume();
+        const p = this.chaseAudio.play();
+        if (p !== undefined) {
+          p.catch(err => {
+            console.warn('[AudioManager] Chase play blocked, using synth:', err.message);
+            this.startSynthChase();
+          });
+        }
+      } catch (e) {
         this.startSynthChase();
       }
     } else {
@@ -196,24 +175,15 @@ class AudioManager {
     }
   }
 
-  _stopChaseSource() {
-    if (this.chaseSource) {
-      try {
-        this.chaseSource.stop();
-        this.chaseSource.disconnect();
-      } catch (e) {}
-      this.chaseSource = null;
-    }
-    if (this.chaseGain) {
-      try { this.chaseGain.disconnect(); } catch (e) {}
-      this.chaseGain = null;
-    }
-  }
-
   stopChase() {
     this.isPlayingChase = false;
     this.stopCurrentVoice();
-    this._stopChaseSource();
+    if (this.chaseAudio) {
+      try {
+        this.chaseAudio.pause();
+        this.chaseAudio.currentTime = 0;
+      } catch (e) {}
+    }
     this.stopSynthChase();
   }
 
@@ -225,44 +195,46 @@ class AudioManager {
     // Stop any currently playing voice
     this.stopCurrentVoice();
 
-    if (!this.buffers[voiceKey]) return;
+    const voiceAudio = this.voiceAudioMap[voiceKey];
+    if (!voiceAudio) return;
 
-    // Duck background volume to 30%
+    this.currentVoiceAudio = voiceAudio;
+    try {
+      voiceAudio.currentTime = 0;
+      voiceAudio.volume = 1.0;
+    } catch (e) {}
+
+    // Duck background chase volume to 30%
     this.voiceDuckingMultiplier = 0.3;
     this.applyCurrentVolume();
 
-    const result = this._playBuffer(voiceKey, { volume: 1.0 });
-    if (result) {
-      this.currentVoiceSource = result.source;
-      this.currentVoiceGain = result.gainNode;
+    const onVoiceEnd = () => {
+      if (this.currentVoiceAudio === voiceAudio) {
+        this.voiceDuckingMultiplier = 1.0;
+        this.applyCurrentVolume();
+        this.currentVoiceAudio = null;
+      }
+    };
 
-      result.source.onended = () => {
-        if (this.currentVoiceSource === result.source) {
-          this.voiceDuckingMultiplier = 1.0;
-          this.applyCurrentVolume();
-          this.currentVoiceSource = null;
-          this.currentVoiceGain = null;
-        }
-      };
-    } else {
-      // Restore ducking if play failed
-      this.voiceDuckingMultiplier = 1.0;
-      this.applyCurrentVolume();
+    voiceAudio.onended = onVoiceEnd;
+
+    const p = voiceAudio.play();
+    if (p !== undefined) {
+      p.catch(err => {
+        console.warn(`[AudioManager] Voice play failed for ${voiceKey}:`, err.message);
+        onVoiceEnd();
+      });
     }
   }
 
   stopCurrentVoice() {
-    if (this.currentVoiceSource) {
+    if (this.currentVoiceAudio) {
       try {
-        this.currentVoiceSource.onended = null;
-        this.currentVoiceSource.stop();
-        this.currentVoiceSource.disconnect();
+        this.currentVoiceAudio.pause();
+        this.currentVoiceAudio.currentTime = 0;
+        this.currentVoiceAudio.onended = null;
       } catch (e) {}
-      this.currentVoiceSource = null;
-    }
-    if (this.currentVoiceGain) {
-      try { this.currentVoiceGain.disconnect(); } catch (e) {}
-      this.currentVoiceGain = null;
+      this.currentVoiceAudio = null;
     }
     this.voiceDuckingMultiplier = 1.0;
     this.applyCurrentVolume();
@@ -274,8 +246,18 @@ class AudioManager {
     if (this.isMuted) return;
     this.unlockAudio();
 
-    if (this.buffers.impact) {
-      this._playBuffer('impact', { volume: 1.0 });
+    if (this.impactAudio) {
+      try {
+        this.impactAudio.currentTime = 0;
+        this.impactAudio.volume = 1.0;
+      } catch (e) {}
+      const p = this.impactAudio.play();
+      if (p !== undefined) {
+        p.catch(err => {
+          console.warn('[AudioManager] Impact play failed, using synth:', err.message);
+          this.playSynthImpact();
+        });
+      }
     } else {
       this.playSynthImpact();
     }
@@ -284,15 +266,11 @@ class AudioManager {
   // ─── Volume Control ───
   applyCurrentVolume() {
     const finalVolume = Math.max(0, Math.min(1, this.baseVolume * this.voiceDuckingMultiplier));
-
-    if (this.chaseGain && this.audioContext) {
-      try {
-        this.chaseGain.gain.setTargetAtTime(finalVolume, this.audioContext.currentTime, 0.05);
-      } catch (e) {}
+    if (this.chaseAudio) {
+      try { this.chaseAudio.volume = finalVolume; } catch (e) {}
     }
-
     if (this.isUsingSynth && this.synthGain && this.audioContext) {
-      this.synthGain.gain.setValueAtTime(finalVolume * 0.3, this.audioContext.currentTime);
+      try { this.synthGain.gain.setValueAtTime(finalVolume * 0.3, this.audioContext.currentTime); } catch (e) {}
     }
   }
 
@@ -302,28 +280,21 @@ class AudioManager {
 
     const normDist = Math.min(Math.max(distance / maxDistance, 0), 1);
     this.baseVolume = Math.max(0.1, 1.0 - normDist * 0.85);
-    this._chasePlaybackRate = isRage ? 1.25 : 1.0;
-
     this.applyCurrentVolume();
 
-    // Update chase playback rate
-    if (this.chaseSource) {
-      try {
-        this.chaseSource.playbackRate.value = this._chasePlaybackRate;
-      } catch (e) {}
+    if (this.chaseAudio) {
+      try { this.chaseAudio.playbackRate = isRage ? 1.25 : 1.0; } catch (e) {}
     }
 
-    // Synth fallback proximity
-    if (this.isUsingSynth && this.synthOscillator && this.audioContext) {
+    if (this.isUsingSynth && this.synthGain && this.synthOscillator && this.audioContext) {
       const freq = 120 + (1 - normDist) * 180 + (isRage ? 60 : 0);
-      this.synthOscillator.frequency.setValueAtTime(freq, this.audioContext.currentTime);
+      try { this.synthOscillator.frequency.setValueAtTime(freq, this.audioContext.currentTime); } catch (e) {}
     }
   }
 
-  // ─── Synth Fallbacks (if mp3 files fail to load entirely) ───
+  // ─── Synth Fallbacks ───
   startSynthChase() {
     if (this.isUsingSynth) return;
-    this.unlockAudio();
     if (!this.audioContext) return;
     try {
       if (this.audioContext.state === 'suspended') {
@@ -337,7 +308,7 @@ class AudioManager {
       this.synthGain.gain.value = 0.2;
 
       this.synthOscillator.connect(this.synthGain);
-      this.synthGain.connect(this.masterGain);
+      this.synthGain.connect(this.audioContext.destination);
 
       this.synthOscillator.start();
       this.isUsingSynth = true;
@@ -359,7 +330,6 @@ class AudioManager {
   }
 
   playSynthImpact() {
-    this.unlockAudio();
     if (!this.audioContext) return;
     try {
       if (this.audioContext.state === 'suspended') {
@@ -376,7 +346,7 @@ class AudioManager {
       gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.5);
 
       osc.connect(gain);
-      gain.connect(this.masterGain);
+      gain.connect(this.audioContext.destination);
 
       osc.start();
       osc.stop(this.audioContext.currentTime + 0.5);
@@ -388,10 +358,10 @@ class AudioManager {
     this.isMuted = !this.isMuted;
     if (this.isMuted) {
       this.stopCurrentVoice();
-      this._stopChaseSource();
+      if (this.chaseAudio) { try { this.chaseAudio.pause(); } catch (e) {} }
       this.stopSynthChase();
     } else if (this.isPlayingChase) {
-      this.startChase();
+      if (this.chaseAudio) { try { this.chaseAudio.play(); } catch (e) {} }
     }
     return this.isMuted;
   }
@@ -399,7 +369,7 @@ class AudioManager {
 
 window.audioManager = new AudioManager();
 
-// ─── Global user interaction listener to unlock audio + trigger preload ───
+// ─── Global user interaction listener to unlock audio ───
 const globalAudioUnlocker = () => {
   if (window.audioManager) {
     window.audioManager.unlockAudio();
