@@ -1,5 +1,5 @@
 /**
- * Virtual Joystick & Multi-input Controller for Touch (Phone/iPad) & Keyboard (Laptop/Desktop)
+ * Multi-Input Controller System (Touch Joystick + Mouse Drag + Keyboard WASD/Arrows)
  */
 class JoystickController {
   constructor() {
@@ -8,9 +8,10 @@ class JoystickController {
     this.stick = document.getElementById('joystick-stick');
 
     this.activeTouchId = null;
+    this.isPointerActive = false;
     this.baseX = 0;
     this.baseY = 0;
-    this.maxRadius = 50;
+    this.maxRadius = 55;
 
     this.inputVector = { x: 0, y: 0 };
     this.keyboardKeys = {
@@ -23,6 +24,7 @@ class JoystickController {
     this.isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
     this.initTouchListeners();
+    this.initPointerListeners();
     this.initKeyboardListeners();
     this.updateControlsHintVisibility();
   }
@@ -39,11 +41,8 @@ class JoystickController {
   }
 
   initTouchListeners() {
-    if (!this.zone) return;
-
     const onTouchStart = (e) => {
       const target = e.target;
-      // Allow touches on UI buttons and menus to proceed without preventDefault
       if (
         target.closest('button, .diff-btn, .btn-primary, .btn-secondary, .hud-btn, .skill-btn, .glass-panel, .screen-overlay') ||
         (window.game && window.game.state !== 'PLAYING')
@@ -51,7 +50,6 @@ class JoystickController {
         return;
       }
 
-      e.preventDefault();
       this.isTouchDevice = true;
       this.updateControlsHintVisibility();
 
@@ -62,9 +60,11 @@ class JoystickController {
       this.baseX = touch.clientX;
       this.baseY = touch.clientY;
 
-      this.base.style.left = `${this.baseX}px`;
-      this.base.style.top = `${this.baseY}px`;
-      this.base.classList.add('visible');
+      if (this.base) {
+        this.base.style.left = `${this.baseX}px`;
+        this.base.style.top = `${this.baseY}px`;
+        this.base.classList.add('visible');
+      }
       this.updateStickPosition(this.baseX, this.baseY);
     };
 
@@ -74,7 +74,6 @@ class JoystickController {
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
         if (touch.identifier === this.activeTouchId) {
-          e.preventDefault();
           this.updateStickPosition(touch.clientX, touch.clientY);
           break;
         }
@@ -92,10 +91,50 @@ class JoystickController {
       }
     };
 
-    this.zone.addEventListener('touchstart', onTouchStart, { passive: false });
-    window.addEventListener('touchmove', onTouchMove, { passive: false });
-    window.addEventListener('touchend', onTouchEnd, { passive: false });
-    window.addEventListener('touchcancel', onTouchEnd, { passive: false });
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
+    window.addEventListener('touchend', onTouchEnd, { passive: true });
+    window.addEventListener('touchcancel', onTouchEnd, { passive: true });
+  }
+
+  initPointerListeners() {
+    const onPointerDown = (e) => {
+      if (this.isTouchDevice && e.pointerType === 'touch') return;
+      const target = e.target;
+      if (
+        target.closest('button, .diff-btn, .btn-primary, .btn-secondary, .hud-btn, .skill-btn, .glass-panel, .screen-overlay') ||
+        (window.game && window.game.state !== 'PLAYING')
+      ) {
+        return;
+      }
+
+      this.isPointerActive = true;
+      this.baseX = e.clientX;
+      this.baseY = e.clientY;
+
+      if (this.base) {
+        this.base.style.left = `${this.baseX}px`;
+        this.base.style.top = `${this.baseY}px`;
+        this.base.classList.add('visible');
+      }
+      this.updateStickPosition(this.baseX, this.baseY);
+    };
+
+    const onPointerMove = (e) => {
+      if (!this.isPointerActive) return;
+      this.updateStickPosition(e.clientX, e.clientY);
+    };
+
+    const onPointerUp = () => {
+      if (this.isPointerActive) {
+        this.reset();
+      }
+    };
+
+    window.addEventListener('pointerdown', onPointerDown, { passive: true });
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+    window.addEventListener('pointerup', onPointerUp, { passive: true });
+    window.addEventListener('pointercancel', onPointerUp, { passive: true });
   }
 
   updateStickPosition(clientX, clientY) {
@@ -109,7 +148,9 @@ class JoystickController {
       dy = Math.sin(angle) * this.maxRadius;
     }
 
-    this.stick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+    if (this.stick) {
+      this.stick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+    }
 
     this.inputVector.x = dx / this.maxRadius;
     this.inputVector.y = dy / this.maxRadius;
@@ -117,37 +158,45 @@ class JoystickController {
 
   initKeyboardListeners() {
     window.addEventListener('keydown', (e) => {
-      switch (e.code) {
-        case 'KeyW': case 'ArrowUp': this.keyboardKeys.up = true; break;
-        case 'KeyS': case 'ArrowDown': this.keyboardKeys.down = true; break;
-        case 'KeyA': case 'ArrowLeft': this.keyboardKeys.left = true; break;
-        case 'KeyD': case 'ArrowRight': this.keyboardKeys.right = true; break;
-        case 'Space':
-          if (window.game && window.game.player) {
-            window.game.player.triggerDash();
-          }
-          break;
-        case 'KeyE': case 'ShiftLeft': case 'ShiftRight':
-          if (window.game) {
-            window.game.dropBananaTrap();
-          }
-          break;
-        case 'KeyP': case 'Escape':
-          if (window.game) {
-            if (window.game.state === 'PLAYING') window.game.pauseGame();
-            else if (window.game.state === 'PAUSED') window.game.resumeGame();
-          }
-          break;
+      const code = e.code;
+      const key = e.key ? e.key.toLowerCase() : '';
+
+      if (code === 'KeyW' || code === 'ArrowUp' || key === 'w' || key === 'ص' || key === 'arrowup') this.keyboardKeys.up = true;
+      if (code === 'KeyS' || code === 'ArrowDown' || key === 's' || key === 'س' || key === 'arrowdown') this.keyboardKeys.down = true;
+      if (code === 'KeyA' || code === 'ArrowLeft' || key === 'a' || key === 'ش' || key === 'arrowleft') this.keyboardKeys.left = true;
+      if (code === 'KeyD' || code === 'ArrowRight' || key === 'd' || key === 'ي' || key === 'ذ' || key === 'arrowright') this.keyboardKeys.right = true;
+
+      if (code === 'Space' || key === ' ') {
+        if (window.game && window.game.player) {
+          window.game.player.triggerDash();
+        }
+      }
+      if (code === 'KeyE' || code === 'ShiftLeft' || code === 'ShiftRight' || key === 'e' || key === 'ث') {
+        if (window.game) {
+          window.game.dropBananaTrap();
+        }
+      }
+      if (code === 'KeyF' || key === 'f' || key === 'ب') {
+        if (window.game) {
+          window.game.throwSlipper();
+        }
+      }
+      if (code === 'KeyP' || code === 'Escape' || key === 'p' || key === 'ح') {
+        if (window.game) {
+          if (window.game.state === 'PLAYING') window.game.pauseGame();
+          else if (window.game.state === 'PAUSED') window.game.resumeGame();
+        }
       }
     });
 
     window.addEventListener('keyup', (e) => {
-      switch (e.code) {
-        case 'KeyW': case 'ArrowUp': this.keyboardKeys.up = false; break;
-        case 'KeyS': case 'ArrowDown': this.keyboardKeys.down = false; break;
-        case 'KeyA': case 'ArrowLeft': this.keyboardKeys.left = false; break;
-        case 'KeyD': case 'ArrowRight': this.keyboardKeys.right = false; break;
-      }
+      const code = e.code;
+      const key = e.key ? e.key.toLowerCase() : '';
+
+      if (code === 'KeyW' || code === 'ArrowUp' || key === 'w' || key === 'ص' || key === 'arrowup') this.keyboardKeys.up = false;
+      if (code === 'KeyS' || code === 'ArrowDown' || key === 's' || key === 'س' || key === 'arrowdown') this.keyboardKeys.down = false;
+      if (code === 'KeyA' || code === 'ArrowLeft' || key === 'a' || key === 'ش' || key === 'arrowleft') this.keyboardKeys.left = false;
+      if (code === 'KeyD' || code === 'ArrowRight' || key === 'd' || key === 'ي' || key === 'ذ' || key === 'arrowright') this.keyboardKeys.right = false;
     });
   }
 
@@ -173,6 +222,7 @@ class JoystickController {
 
   reset() {
     this.activeTouchId = null;
+    this.isPointerActive = false;
     this.inputVector = { x: 0, y: 0 };
     if (this.base) this.base.classList.remove('visible');
     if (this.stick) this.stick.style.transform = `translate(-50%, -50%)`;

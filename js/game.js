@@ -729,13 +729,6 @@ class Game {
     // Update Entities
     if (this.player) {
       this.player.update(dt, inputVector, this.arenaWidth, this.arenaHeight, this.obstacles, this.doors);
-
-      // Smooth Camera Tracking (Centered on Player)
-      this.camera.x = this.player.x - this.width / 2;
-      this.camera.y = this.player.y - this.height / 2;
-
-      this.camera.x = Math.min(Math.max(this.camera.x, 0), this.arenaWidth - this.width);
-      this.camera.y = Math.min(Math.max(this.camera.y, 0), this.arenaHeight - this.height);
     }
 
     if (this.kenan) {
