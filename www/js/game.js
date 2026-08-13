@@ -2035,17 +2035,40 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// 2. التحكم في جدار التثبيت الإجباري
+// 2. التحكم في جدار التثبيت الإجباري (Immediate Force Wall if in standard browser)
 let deferredInstallPrompt = null;
 const pwaForceOverlay = document.getElementById('pwa-force-install-overlay');
 const pwaInstallButton = document.getElementById('pwa-install-btn');
+const pwaManualGuide = document.getElementById('pwa-manual-guide');
+
+const checkPWAInstallState = () => {
+  // فحص هل اللعبة مفتوحة كتطبيق مثبت ومستقل (Standalone PWA)
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches 
+    || window.navigator.standalone === true 
+    || document.referrer.includes('android-app://')
+    || window.location.search.includes('mode=pwa');
+
+  if (!isStandalone && pwaForceOverlay) {
+    // إظهار جدار التثبيت الإجباري فوراً عند فتح الصفحة في المتصفح العادي!
+    pwaForceOverlay.style.display = 'flex';
+  } else if (pwaForceOverlay) {
+    pwaForceOverlay.style.display = 'none';
+  }
+};
+
+// فحص الحالة فور تحميل الصفحة
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', checkPWAInstallState);
+} else {
+  checkPWAInstallState();
+}
+window.addEventListener('load', checkPWAInstallState);
 
 window.addEventListener('beforeinstallprompt', (e) => {
-  // منع النافذة التلقائية للمتصفح
+  // منع النافذة التلقائية للمتصفح وحفظ الحدث
   e.preventDefault();
   deferredInstallPrompt = e;
 
-  // إظهار جدار الحجب الإجباري لمنع اللعب قبل التثبيت
   if (pwaForceOverlay) {
     pwaForceOverlay.style.display = 'flex';
   }
@@ -2057,13 +2080,29 @@ if (pwaInstallButton) {
       deferredInstallPrompt.prompt();
       deferredInstallPrompt.userChoice.then((choiceResult) => {
         if (choiceResult.outcome === 'accepted') {
-          // إخفاء الشاشة بعد قبول التثبيت
           if (pwaForceOverlay) {
             pwaForceOverlay.style.display = 'none';
           }
         }
         deferredInstallPrompt = null;
       });
+    } else {
+      // إظهار دليل التثبيت اليدوي للأجهزة (مثل iOS Safari أو المتصفحات الأخرى)
+      if (pwaManualGuide) {
+        pwaManualGuide.style.display = 'block';
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const iosDiv = document.getElementById('pwa-ios-instructions');
+        const androidDiv = document.getElementById('pwa-android-instructions');
+        if (iosDiv && androidDiv) {
+          if (isIOS) {
+            iosDiv.style.display = 'block';
+            androidDiv.style.display = 'none';
+          } else {
+            iosDiv.style.display = 'none';
+            androidDiv.style.display = 'block';
+          }
+        }
+      }
     }
   });
 }

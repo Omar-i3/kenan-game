@@ -354,9 +354,24 @@
   <!-- PWA Force Install Overlay -->
   <div id="pwa-force-install-overlay" class="pwa-overlay">
     <div class="pwa-modal">
+      <div style="font-size: 2.8rem; margin-bottom: 8px;">📲👹</div>
       <h2>🎮 مطلوب تثبيت التطبيق للمتابعة!</h2>
       <p>للحصول على أفضل أداء وأصوات كاملة بدون تقطيع على جوالك، يرجى تثبيت التطبيق على جهازك أولاً.</p>
       <button id="pwa-install-btn" class="pwa-btn">📥 تثبيت اللعبة الآن</button>
+
+      <!-- Manual Install Guide for iOS / Fallback -->
+      <div id="pwa-manual-guide" class="pwa-manual-guide" style="display: none; margin-top: 15px; text-align: right; background: rgba(0,0,0,0.35); padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,204,0,0.4); font-size: 0.88rem;">
+        <div style="color: #ffcc00; font-weight: bold; margin-bottom: 6px;">📱 خطوات التثبيت السريع:</div>
+        <div id="pwa-ios-instructions">
+          1. اضغط زر المشاركة <span style="font-size: 1.2rem;">⎋</span> أسفل متصفح Safari.<br>
+          2. مرر للأسفل واختر <b>"إضافة إلى الصفحة الرئيسية" 📲</b>.<br>
+          3. افتح اللعبة من شاشتك الرئيسية للعب!
+        </div>
+        <div id="pwa-android-instructions" style="display: none;">
+          1. اضغط زر القائمة <b>(⋮)</b> أعلى المتصفح.<br>
+          2. اختر <b>"تثبيت التطبيق"</b> أو <b>"إضافة إلى الشاشة الرئيسية" 📲</b>.
+        </div>
+      </div>
     </div>
   </div>
 </body>
