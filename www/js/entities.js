@@ -2,11 +2,47 @@
  * Entities & Game Mechanics (Expansion: Enlarged Kenan, Dash, Banana Traps, Speed Boost Pads, Interactive Doors, Night Mode Flashlight)
  */
 
-// Image Preloader for Kenan Sprite (Relative path for GitHub Pages & APK)
+// Image Preloader for Kenan & Player Sprites (Relative paths for GitHub Pages & APK)
 const kenanImg = new Image();
 kenanImg.src = './kenan.png';
 let isKenanImgLoaded = false;
 kenanImg.onload = () => { isKenanImgLoaded = true; };
+
+const playerImg = new Image();
+playerImg.src = './assets/player.png';
+let isPlayerImgLoaded = false;
+playerImg.onload = () => { isPlayerImgLoaded = true; };
+
+// Preload Stage Background Images (Level/bg_stage1.png to bg_stage10.png)
+const STAGE_BG_IMAGES = {};
+for (let i = 1; i <= 10; i++) {
+  const img = new Image();
+  img.src = `./Level/bg_stage${i}.png`;
+  STAGE_BG_IMAGES[i] = img;
+}
+
+// Preload Item & Obstacle Asset Images (assets/item_*.png, obstacle_*.png, speed_pad.png)
+const ASSET_IMAGES = {};
+const ASSET_PATHS = {
+  key: './assets/item_key.png',
+  juice: './assets/item_juice.png',
+  switch: './assets/item_switch.png',
+  sprinkler: './assets/item_sprinkler.png',
+  wire: './assets/item_wire.png',
+  candy: './assets/item_candy.png',
+  keycard: './assets/item_key.png',
+  generator: './assets/item_switch.png',
+  crystal: './assets/obstacle_crystal.png',
+  crate: './assets/obstacle_crate.png',
+  door: './assets/obstacle_door.png',
+  speed_pad: './assets/speed_pad.png'
+};
+
+for (const [type, path] of Object.entries(ASSET_PATHS)) {
+  const img = new Image();
+  img.src = path;
+  ASSET_IMAGES[type] = img;
+}
 
 // Floating Meme Quotes List & Voice Mapping
 const MEME_VOICE_MAPPING = [
@@ -42,8 +78,8 @@ class Particle {
     this.vy = vy;
     this.color = color;
     this.size = size;
-    this.life = maxLife;
     this.maxLife = maxLife;
+    this.life = maxLife;
   }
 
   update(dt) {
@@ -54,92 +90,80 @@ class Particle {
 
   draw(ctx) {
     if (this.life <= 0) return;
-    const alpha = Math.max(0, this.life / this.maxLife);
     ctx.save();
-    ctx.globalAlpha = alpha;
+    ctx.globalAlpha = Math.max(0, this.life / this.maxLife);
     ctx.fillStyle = this.color;
     ctx.beginPath();
-    ctx.arc(this.x, this.y, this.size * alpha, 0, Math.PI * 2);
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
 }
 
 /**
- * Player Entity
+ * Player Character Entity
  */
 class Player {
   constructor(x, y) {
     this.x = x;
     this.y = y;
-    this.radius = 22;
-    this.baseSpeed = 260; // px/sec
-    this.speedBoostMultiplier = 1.0;
-    this.speedBoostTimer = 0;
-    this.padSpeedBoostTimer = 0;
-
+    this.radius = 28;
+    this.speed = 280;
     this.angle = 0;
     this.vx = 0;
     this.vy = 0;
 
-    // Dash Skill State
-    this.dashCooldown = 0; // 8s max
-    this.dashDuration = 0; // 0.35s duration
-    this.bananaTraps = 2; // Starts with 2 banana traps
+    // Dash Skill Burst State (8s Cooldown, 0.35s burst)
+    this.dashCooldown = 0;
+    this.dashDuration = 0;
+    this.dashMultiplier = 2.4;
+
+    // PowerUp multipliers
+    this.speedBoostTimer = 0;
+    this.padSpeedBoostTimer = 0;
+
+    // Item Inventory
+    this.bananaTraps = 2;
   }
 
   triggerDash() {
     if (this.dashCooldown <= 0) {
-      this.dashCooldown = 8.0;
       this.dashDuration = 0.35;
+      this.dashCooldown = 8.0;
       window.soundEffectsManager.playDashSound();
       window.hapticsManager.triggerTac();
-      return true;
     }
-    return false;
   }
 
   update(dt, inputVector, arenaWidth, arenaHeight, obstacles, doors) {
-    // Cooldown updates
     if (this.dashCooldown > 0) this.dashCooldown -= dt;
     if (this.dashDuration > 0) this.dashDuration -= dt;
+    if (this.speedBoostTimer > 0) this.speedBoostTimer -= dt;
+    if (this.padSpeedBoostTimer > 0) this.padSpeedBoostTimer -= dt;
 
-    if (this.speedBoostTimer > 0) {
-      this.speedBoostTimer -= dt;
-      this.speedBoostMultiplier = 1.5;
-    } else if (this.padSpeedBoostTimer > 0) {
-      this.padSpeedBoostTimer -= dt;
-      this.speedBoostMultiplier = 1.7; // +70% speed from pad
-    } else {
-      this.speedBoostMultiplier = 1.0;
-    }
+    let currentSpeed = this.speed;
 
-    let currentSpeed = this.baseSpeed * this.speedBoostMultiplier;
-
-    // Dash burst speed override
     if (this.dashDuration > 0) {
-      currentSpeed *= 2.8;
+      currentSpeed *= this.dashMultiplier;
+    } else if (this.speedBoostTimer > 0) {
+      currentSpeed *= 1.5;
+    } else if (this.padSpeedBoostTimer > 0) {
+      currentSpeed *= 1.7;
     }
 
     if (inputVector.x !== 0 || inputVector.y !== 0) {
+      this.angle = Math.atan2(inputVector.y, inputVector.x);
       this.vx = inputVector.x * currentSpeed;
       this.vy = inputVector.y * currentSpeed;
-      this.angle = Math.atan2(inputVector.y, inputVector.x);
     } else {
-      // If dashing without joystick movement, dash forward in facing direction
-      if (this.dashDuration > 0) {
-        this.vx = Math.cos(this.angle) * currentSpeed;
-        this.vy = Math.sin(this.angle) * currentSpeed;
-      } else {
-        this.vx *= 0.8;
-        this.vy *= 0.8;
-      }
+      this.vx *= 0.8;
+      this.vy *= 0.8;
     }
 
     let nextX = this.x + this.vx * dt;
     let nextY = this.y + this.vy * dt;
 
-    // Obstacle Collisions sliding
+    // Obstacle Collisions
     for (const obs of obstacles) {
       const col = obs.checkCollision(nextX, nextY, this.radius);
       if (col.collided) {
@@ -148,7 +172,7 @@ class Player {
       }
     }
 
-    // Door Collisions (Player passes through or closes doors)
+    // Door Collisions
     for (const door of doors) {
       if (door.isClosed && !door.isBroken) {
         const col = door.checkCollision(nextX, nextY, this.radius);
@@ -169,7 +193,7 @@ class Player {
     ctx.translate(this.x, this.y);
 
     // Dashing or Speed Trail
-    if (this.dashDuration > 0 || this.speedBoostMultiplier > 1.0) {
+    if (this.dashDuration > 0 || this.speedBoostTimer > 0 || this.padSpeedBoostTimer > 0) {
       ctx.beginPath();
       ctx.arc(0, 0, this.radius + 10, 0, Math.PI * 2);
       ctx.fillStyle = this.dashDuration > 0 ? 'rgba(0, 240, 255, 0.4)' : 'rgba(0, 255, 136, 0.3)';
@@ -191,28 +215,33 @@ class Player {
 
     ctx.rotate(this.angle);
 
-    // Outer Glow Ring
-    ctx.shadowColor = '#00f0ff';
-    ctx.shadowBlur = 14;
+    if (isPlayerImgLoaded) {
+      const pSize = this.radius * 2.6;
+      ctx.drawImage(playerImg, -pSize / 2, -pSize / 2, pSize, pSize);
+    } else {
+      // Outer Glow Ring
+      ctx.shadowColor = '#00f0ff';
+      ctx.shadowBlur = 14;
 
-    // Body Circle
-    ctx.fillStyle = '#00f0ff';
-    ctx.beginPath();
-    ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
-    ctx.fill();
+      // Body Circle
+      ctx.fillStyle = '#00f0ff';
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+      ctx.fill();
 
-    // Direction Marker / Cap
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(10, 0, 7, 0, Math.PI * 2);
-    ctx.fill();
+      // Direction Marker / Cap
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(10, 0, 7, 0, Math.PI * 2);
+      ctx.fill();
 
-    // Funny Eyes
-    ctx.fillStyle = '#000000';
-    ctx.beginPath();
-    ctx.arc(6, -6, 3, 0, Math.PI * 2);
-    ctx.arc(6, 6, 3, 0, Math.PI * 2);
-    ctx.fill();
+      // Funny Eyes
+      ctx.fillStyle = '#000000';
+      ctx.beginPath();
+      ctx.arc(6, -6, 3, 0, Math.PI * 2);
+      ctx.arc(6, 6, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     ctx.restore();
   }
@@ -224,7 +253,7 @@ class Player {
     ctx.rotate(this.angle);
 
     const beamAngle = Math.PI / 3.2; // ~56 degrees cone
-    const beamLength = 320;
+    const beamLength = 340;
 
     const grad = ctx.createRadialGradient(0, 0, 10, 0, 0, beamLength);
     grad.addColorStop(0, 'rgba(255, 255, 220, 0.95)');
@@ -253,6 +282,9 @@ class KenanMonster {
     this.difficulty = difficulty;
 
     this.isRage = false;
+    this.isBoss = false;
+    this.bossHp = 100;
+    this.maxBossHp = 100;
     this.freezeTimer = 0;
     this.slipTimer = 0; // Banana Slip 2.0s duration
     this.teleportCooldown = 35.0; // Teleport Jump every 35s
@@ -378,7 +410,7 @@ class KenanMonster {
       }
     }
 
-    // Door Bashing (Kenan bashes closed doors for 1.5s before breaking them)
+    // Door Bashing
     for (const door of doors) {
       if (door.isClosed && !door.isBroken) {
         const col = door.checkCollision(nextX, nextY, this.radius);
@@ -395,7 +427,6 @@ class KenanMonster {
   }
 
   triggerTeleportJump(px, py, arenaWidth, arenaHeight, particles) {
-    // Create shockwave particles at origin
     for (let i = 0; i < 15; i++) {
       particles.push(new Particle(
         this.x, this.y,
@@ -404,29 +435,18 @@ class KenanMonster {
       ));
     }
 
-    // Teleport to 140px in front of player
     const angleToPlayer = Math.atan2(py - this.y, px - this.x);
     this.x = Math.min(Math.max(px - Math.cos(angleToPlayer) * 140, this.radius), arenaWidth - this.radius);
     this.y = Math.min(Math.max(py - Math.sin(angleToPlayer) * 140, this.radius), arenaHeight - this.radius);
 
     window.soundEffectsManager.playTeleportSound();
-    window.hapticsManager.triggerImpact();
-
-    // Shockwave particles at target
-    for (let i = 0; i < 15; i++) {
-      particles.push(new Particle(
-        this.x, this.y,
-        (Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200,
-        '#00f0ff', 8, 0.4
-      ));
-    }
   }
 
   draw(ctx, particles, isNightMode = false) {
     ctx.save();
     ctx.translate(this.x, this.y);
 
-    // Freeze / Banana Slip Visuals
+    // Aura ring
     if (this.slipTimer > 0) {
       ctx.beginPath();
       ctx.arc(0, 0, this.radius + 15, 0, Math.PI * 2);
@@ -439,11 +459,10 @@ class KenanMonster {
       ctx.fill();
     }
 
-    // Scale enlarge (+15% scale in Rage Mode)
     const scale = (this.isRage ? 1.15 : 1.0);
     ctx.scale(scale, scale);
 
-    if (this.isRage) {
+    if (this.isRage || this.isBoss) {
       ctx.shadowColor = '#ff0044';
       ctx.shadowBlur = 28;
 
@@ -454,8 +473,8 @@ class KenanMonster {
 
       if (Math.random() < 0.6) {
         particles.push(new Particle(
-          this.x + (Math.random() - 0.5) * 25,
-          this.y + (Math.random() - 0.5) * 25,
+          this.x + (Math.random() - 0.5) * (this.radius * 0.8),
+          this.y + (Math.random() - 0.5) * (this.radius * 0.8),
           (Math.random() - 0.5) * 50,
           -50 - Math.random() * 30,
           '#ff0044',
@@ -467,8 +486,7 @@ class KenanMonster {
 
     ctx.rotate(this.angle);
 
-    // Draw Enlarged Kenan Image Asset (scaled up 40%!)
-    const imgSize = this.radius * 2.7; // ~105px width
+    const imgSize = this.radius * 2.7;
     if (isKenanImgLoaded) {
       ctx.drawImage(kenanImg, -imgSize / 2, -imgSize / 2, imgSize, imgSize);
     } else {
@@ -483,7 +501,6 @@ class KenanMonster {
       ctx.fill();
     }
 
-    // Glowing Red Eye Beams in Night Mode
     if (isNightMode) {
       ctx.shadowColor = '#ff0000';
       ctx.shadowBlur = 20;
@@ -496,7 +513,6 @@ class KenanMonster {
 
     ctx.restore();
 
-    // Render Floating Meme Speech Bubble
     this.drawSpeechBubble(ctx);
   }
 
@@ -540,19 +556,13 @@ class KenanClone {
   constructor(x, y) {
     this.x = x;
     this.y = y;
-    this.radius = 39;
+    this.radius = 35;
     this.angle = Math.random() * Math.PI * 2;
-    this.speed = 190;
-    this.changeDirTimer = 0;
+    this.speed = 210;
   }
 
   update(dt, arenaWidth, arenaHeight, obstacles) {
-    this.changeDirTimer -= dt;
-    if (this.changeDirTimer <= 0) {
-      this.changeDirTimer = 1.5 + Math.random() * 2;
-      this.angle += (Math.random() - 0.5) * 1.5;
-    }
-
+    this.angle += (Math.random() - 0.5) * 2 * dt;
     let nextX = this.x + Math.cos(this.angle) * this.speed * dt;
     let nextY = this.y + Math.sin(this.angle) * this.speed * dt;
 
@@ -565,9 +575,9 @@ class KenanClone {
 
   draw(ctx) {
     ctx.save();
-    ctx.globalAlpha = 0.5;
     ctx.translate(this.x, this.y);
     ctx.rotate(this.angle);
+    ctx.globalAlpha = 0.55; // Translucent ghost decoy
 
     const imgSize = this.radius * 2.7;
     if (isKenanImgLoaded) {
@@ -590,18 +600,20 @@ class BananaTrap {
     this.x = x;
     this.y = y;
     this.radius = 18;
-    this.isPlaced = true;
   }
 
   draw(ctx) {
     ctx.save();
     ctx.translate(this.x, this.y);
+
+    ctx.shadowColor = '#ffcc00';
+    ctx.shadowBlur = 12;
+
     ctx.font = '24px Cairo, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.shadowColor = '#ffcc00';
-    ctx.shadowBlur = 10;
     ctx.fillText('🍌', 0, 0);
+
     ctx.restore();
   }
 }
@@ -625,25 +637,30 @@ class SpeedBoostPad {
     ctx.save();
     ctx.translate(this.x, this.y);
 
-    ctx.shadowColor = '#00ff88';
-    ctx.shadowBlur = 15;
+    const padImg = ASSET_IMAGES['speed_pad'];
+    if (padImg && padImg.complete && padImg.naturalWidth > 0) {
+      ctx.shadowColor = '#00ff88';
+      ctx.shadowBlur = 15;
+      ctx.drawImage(padImg, -this.radius, -this.radius, this.radius * 2, this.radius * 2);
+    } else {
+      ctx.shadowColor = '#00ff88';
+      ctx.shadowBlur = 15;
 
-    // Glowing Neon Base Box
-    ctx.fillStyle = 'rgba(0, 255, 136, 0.25)';
-    ctx.strokeStyle = '#00ff88';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.roundRect(-this.radius, -this.radius, this.radius * 2, this.radius * 2, 10);
-    ctx.fill();
-    ctx.stroke();
+      ctx.fillStyle = 'rgba(0, 255, 136, 0.25)';
+      ctx.strokeStyle = '#00ff88';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(-this.radius, -this.radius, this.radius * 2, this.radius * 2, 10);
+      ctx.fill();
+      ctx.stroke();
 
-    // Pulsing Animated Arrows
-    const offset = Math.sin(this.animTimer) * 4;
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 20px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('⚡', 0, offset);
+      const offset = Math.sin(this.animTimer) * 4;
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 20px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('⚡', 0, offset);
+    }
 
     ctx.restore();
   }
@@ -663,7 +680,7 @@ class InteractiveDoor {
 
     this.isClosed = true;
     this.isBroken = false;
-    this.bashTimer = 1.5; // Requires 1.5s bash by Kenan to break
+    this.bashTimer = 1.5;
   }
 
   checkCollision(px, py, pradius) {
@@ -687,7 +704,6 @@ class InteractiveDoor {
     if (!this.isClosed || this.isBroken) return;
     this.bashTimer -= dt;
 
-    // Emit wood splinter particles
     if (Math.random() < 0.4) {
       particles.push(new Particle(
         this.x + (Math.random() - 0.5) * this.width,
@@ -706,27 +722,33 @@ class InteractiveDoor {
   }
 
   draw(ctx) {
-    if (this.isBroken) return; // Broken door disappears
+    if (this.isBroken) return;
 
     ctx.save();
     ctx.translate(this.x, this.y);
 
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
-    ctx.shadowBlur = 8;
+    const doorImg = ASSET_IMAGES['door'];
+    if (doorImg && doorImg.complete && doorImg.naturalWidth > 0) {
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+      ctx.shadowBlur = 8;
+      ctx.drawImage(doorImg, -this.width / 2, -this.height / 2, this.width, this.height);
+    } else {
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+      ctx.shadowBlur = 8;
 
-    ctx.fillStyle = '#8b5a2b';
-    ctx.strokeStyle = '#ffcc00';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.roundRect(-this.width / 2, -this.height / 2, this.width, this.height, 6);
-    ctx.fill();
-    ctx.stroke();
+      ctx.fillStyle = '#8b5a2b';
+      ctx.strokeStyle = '#ffcc00';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(-this.width / 2, -this.height / 2, this.width, this.height, 6);
+      ctx.fill();
+      ctx.stroke();
 
-    // Door knob detail
-    ctx.fillStyle = '#ffcc00';
-    ctx.beginPath();
-    ctx.arc(this.width / 3, 0, 4, 0, Math.PI * 2);
-    ctx.fill();
+      ctx.fillStyle = '#ffcc00';
+      ctx.beginPath();
+      ctx.arc(this.width / 3, 0, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     ctx.restore();
   }
@@ -791,7 +813,7 @@ class PowerUp {
     this.x = x;
     this.y = y;
     this.radius = 18;
-    this.type = type; // 'speed', 'freeze', 'banana'
+    this.type = type;
     this.lifespan = 6.0;
     this.animTimer = 0;
   }
@@ -836,6 +858,8 @@ class PowerUp {
 
     ctx.restore();
   }
+}
+
 /**
  * Story Mode Stages Data
  */
@@ -969,7 +993,7 @@ class StoryItem {
   constructor(x, y, type, icon) {
     this.x = x;
     this.y = y;
-    this.radius = 22;
+    this.radius = 24;
     this.type = type;
     this.icon = icon || '⭐';
     this.isCollected = false;
@@ -989,28 +1013,35 @@ class StoryItem {
     const floatOffset = Math.sin(this.animTimer) * 6;
     ctx.translate(0, floatOffset);
 
-    // Glowing Aura
-    ctx.shadowColor = '#00f0ff';
-    ctx.shadowBlur = 18;
+    const itemImg = ASSET_IMAGES[this.type];
+    if (itemImg && itemImg.complete && itemImg.naturalWidth > 0) {
+      ctx.shadowColor = '#00f0ff';
+      ctx.shadowBlur = 18;
+      const iSize = this.radius * 2.2;
+      ctx.drawImage(itemImg, -iSize / 2, -iSize / 2, iSize, iSize);
+    } else {
+      ctx.shadowColor = '#00f0ff';
+      ctx.shadowBlur = 18;
 
-    ctx.fillStyle = 'rgba(0, 240, 255, 0.25)';
-    ctx.beginPath();
-    ctx.arc(0, 0, this.radius + 6, 0, Math.PI * 2);
-    ctx.fill();
+      ctx.fillStyle = 'rgba(0, 240, 255, 0.25)';
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius + 6, 0, Math.PI * 2);
+      ctx.fill();
 
-    ctx.fillStyle = '#1b1638';
-    ctx.strokeStyle = '#00f0ff';
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
+      ctx.fillStyle = '#1b1638';
+      ctx.strokeStyle = '#00f0ff';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
 
-    ctx.shadowBlur = 0;
-    ctx.font = '20px Cairo, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(this.icon, 0, 1);
+      ctx.shadowBlur = 0;
+      ctx.font = '20px Cairo, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(this.icon, 0, 1);
+    }
 
     ctx.restore();
   }
@@ -1044,25 +1075,32 @@ class PushableCrate {
     ctx.save();
     ctx.translate(this.x, this.y);
 
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
-    ctx.shadowBlur = 12;
-    ctx.shadowOffsetY = 6;
+    const crateImg = ASSET_IMAGES['crate'];
+    if (crateImg && crateImg.complete && crateImg.naturalWidth > 0) {
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+      ctx.shadowBlur = 12;
+      ctx.drawImage(crateImg, -this.width / 2, -this.height / 2, this.width, this.height);
+    } else {
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+      ctx.shadowBlur = 12;
+      ctx.shadowOffsetY = 6;
 
-    ctx.fillStyle = '#a06028';
-    ctx.strokeStyle = '#5a3410';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.roundRect(-this.width / 2, -this.height / 2, this.width, this.height, 8);
-    ctx.fill();
-    ctx.stroke();
+      ctx.fillStyle = '#a06028';
+      ctx.strokeStyle = '#5a3410';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(-this.width / 2, -this.height / 2, this.width, this.height, 8);
+      ctx.fill();
+      ctx.stroke();
 
-    ctx.fillStyle = '#6d4019';
-    ctx.beginPath();
-    ctx.moveTo(-this.width / 2 + 6, -this.height / 2 + 6);
-    ctx.lineTo(this.width / 2 - 6, this.height / 2 - 6);
-    ctx.moveTo(this.width / 2 - 6, -this.height / 2 + 6);
-    ctx.lineTo(-this.width / 2 + 6, this.height / 2 - 6);
-    ctx.stroke();
+      ctx.fillStyle = '#6d4019';
+      ctx.beginPath();
+      ctx.moveTo(-this.width / 2 + 6, -this.height / 2 + 6);
+      ctx.lineTo(this.width / 2 - 6, this.height / 2 - 6);
+      ctx.moveTo(this.width / 2 - 6, -this.height / 2 + 6);
+      ctx.lineTo(-this.width / 2 + 6, this.height / 2 - 6);
+      ctx.stroke();
+    }
 
     ctx.restore();
   }
@@ -1125,6 +1163,7 @@ window.Entities = {
   PushableCrate,
   SlipperProjectile,
   STORY_STAGES,
+  STAGE_BG_IMAGES,
+  ASSET_IMAGES,
   LOSS_QUOTES
 };
-

@@ -864,12 +864,24 @@ class Game {
     });
   }
 
+  drawStageBackground() {
+    if (this.gameMode === 'STORY') {
+      const bgImg = window.Entities.STAGE_BG_IMAGES[this.currentStageId];
+      if (bgImg && bgImg.complete && bgImg.naturalWidth > 0) {
+        this.ctx.save();
+        this.ctx.drawImage(bgImg, 0, 0, this.arenaWidth, this.arenaHeight);
+        this.ctx.restore();
+      }
+    }
+  }
+
   draw() {
     this.ctx.clearRect(0, 0, this.width, this.height);
 
     this.ctx.save();
     this.ctx.translate(-Math.round(this.camera.x), -Math.round(this.camera.y));
 
+    this.drawStageBackground();
     this.drawArenaGrid();
     this.speedPads.forEach(sp => sp.draw(this.ctx));
     this.doors.forEach(d => d.draw(this.ctx));
