@@ -1906,22 +1906,42 @@ class Game {
 
   drawArenaGrid() {
     this.ctx.save();
-    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-    this.ctx.lineWidth = 1;
+    // Arena Border Walls (Danger Boundary)
+    this.ctx.strokeStyle = '#ff0055';
+    this.ctx.lineWidth = 14;
+    this.ctx.strokeRect(0, 0, this.arenaWidth, this.arenaHeight);
 
-    const gridSize = 70;
-    for (let x = 0; x < this.arenaWidth; x += gridSize) {
+    // Highly-optimized Viewport Culled Grid with Crosshairs
+    this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.14)';
+    this.ctx.lineWidth = 1.5;
+
+    const gridSize = 120;
+    const startX = Math.max(0, Math.floor(this.camera.x / gridSize) * gridSize);
+    const endX = Math.min(this.arenaWidth, this.camera.x + this.width + gridSize * 2);
+    const startY = Math.max(0, Math.floor(this.camera.y / gridSize) * gridSize);
+    const endY = Math.min(this.arenaHeight, this.camera.y + this.height + gridSize * 2);
+
+    for (let x = startX; x <= endX; x += gridSize) {
       this.ctx.beginPath();
-      this.ctx.moveTo(x, 0);
-      this.ctx.lineTo(x, this.arenaHeight);
+      this.ctx.moveTo(x, startY);
+      this.ctx.lineTo(x, endY);
       this.ctx.stroke();
     }
-    for (let y = 0; y < this.arenaHeight; y += gridSize) {
+    for (let y = startY; y <= endY; y += gridSize) {
       this.ctx.beginPath();
-      this.ctx.moveTo(0, y);
-      this.ctx.lineTo(this.arenaWidth, y);
+      this.ctx.moveTo(startX, y);
+      this.ctx.lineTo(endX, y);
       this.ctx.stroke();
     }
+
+    // Grid Intersections Crosshairs (Immediate motion clarity)
+    this.ctx.fillStyle = 'rgba(0, 240, 255, 0.35)';
+    for (let x = startX; x <= endX; x += gridSize) {
+      for (let y = startY; y <= endY; y += gridSize) {
+        this.ctx.fillRect(x - 3, y - 3, 6, 6);
+      }
+    }
+
     this.ctx.restore();
   }
 
@@ -2037,22 +2057,37 @@ if ('serviceWorker' in navigator) {
 
 // 2. التحكم في جدار التثبيت الإجباري (Immediate Force Wall if in standard browser)
 let deferredInstallPrompt = null;
-const pwaForceOverlay = document.getElementById('pwa-force-install-overlay');
-const pwaInstallButton = document.getElementById('pwa-install-btn');
-const pwaManualGuide = document.getElementById('pwa-manual-guide');
+
+const getPWAOverlay = () => document.getElementById('pwa-force-install-overlay');
+const getPWAInstallBtn = () => document.getElementById('pwa-install-btn');
+const getPWASkipBtn = () => document.getElementById('pwa-skip-btn');
+const getPWAManualGuide = () => document.getElementById('pwa-manual-guide');
+
+const requestFullscreenOnAction = () => {
+  try {
+    const docEl = document.documentElement;
+    if (docEl.requestFullscreen && !document.fullscreenElement) {
+      docEl.requestFullscreen().catch(() => {});
+    } else if (docEl.webkitRequestFullscreen && !document.webkitFullscreenElement) {
+      docEl.webkitRequestFullscreen().catch(() => {});
+    }
+  } catch (e) {}
+};
 
 const checkPWAInstallState = () => {
   // فحص هل اللعبة مفتوحة كتطبيق مثبت ومستقل (Standalone PWA)
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches 
     || window.navigator.standalone === true 
     || document.referrer.includes('android-app://')
-    || window.location.search.includes('mode=pwa');
+    || window.location.search.includes('mode=pwa')
+    || sessionStorage.getItem('pwa_skipped') === 'true';
 
-  if (!isStandalone && pwaForceOverlay) {
+  const overlay = getPWAOverlay();
+  if (!isStandalone && overlay) {
     // إظهار جدار التثبيت الإجباري فوراً عند فتح الصفحة في المتصفح العادي!
-    pwaForceOverlay.style.display = 'flex';
-  } else if (pwaForceOverlay) {
-    pwaForceOverlay.style.display = 'none';
+    overlay.style.display = 'flex';
+  } else if (overlay) {
+    overlay.style.display = 'none';
   }
 };
 
@@ -2062,47 +2097,68 @@ if (document.readyState === 'loading') {
 } else {
   checkPWAInstallState();
 }
-window.addEventListener('load', checkPWAInstallState);
+window.addEventListener('load', () => {
+  checkPWAInstallState();
+
+  const installBtn = getPWAInstallBtn();
+  if (installBtn) {
+    installBtn.addEventListener('click', () => {
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        deferredInstallPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            const overlay = getPWAOverlay();
+            if (overlay) overlay.style.display = 'none';
+          }
+          deferredInstallPrompt = null;
+        });
+      } else {
+        const guide = getPWAManualGuide();
+        if (guide) {
+          guide.style.display = 'block';
+          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+          const iosDiv = document.getElementById('pwa-ios-instructions');
+          const androidDiv = document.getElementById('pwa-android-instructions');
+          if (iosDiv && androidDiv) {
+            if (isIOS) {
+              iosDiv.style.display = 'block';
+              androidDiv.style.display = 'none';
+            } else {
+              iosDiv.style.display = 'none';
+              androidDiv.style.display = 'block';
+            }
+          }
+        }
+      }
+    });
+  }
+
+  const skipBtn = getPWASkipBtn();
+  if (skipBtn) {
+    skipBtn.addEventListener('click', () => {
+      sessionStorage.setItem('pwa_skipped', 'true');
+      const overlay = getPWAOverlay();
+      if (overlay) overlay.style.display = 'none';
+      requestFullscreenOnAction();
+    });
+  }
+});
 
 window.addEventListener('beforeinstallprompt', (e) => {
   // منع النافذة التلقائية للمتصفح وحفظ الحدث
   e.preventDefault();
   deferredInstallPrompt = e;
 
-  if (pwaForceOverlay) {
-    pwaForceOverlay.style.display = 'flex';
+  const overlay = getPWAOverlay();
+  if (overlay && sessionStorage.getItem('pwa_skipped') !== 'true') {
+    overlay.style.display = 'flex';
   }
 });
 
-if (pwaInstallButton) {
-  pwaInstallButton.addEventListener('click', () => {
-    if (deferredInstallPrompt) {
-      deferredInstallPrompt.prompt();
-      deferredInstallPrompt.userChoice.then((choiceResult) => {
-        if (choiceResult.outcome === 'accepted') {
-          if (pwaForceOverlay) {
-            pwaForceOverlay.style.display = 'none';
-          }
-        }
-        deferredInstallPrompt = null;
-      });
-    } else {
-      // إظهار دليل التثبيت اليدوي للأجهزة (مثل iOS Safari أو المتصفحات الأخرى)
-      if (pwaManualGuide) {
-        pwaManualGuide.style.display = 'block';
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-        const iosDiv = document.getElementById('pwa-ios-instructions');
-        const androidDiv = document.getElementById('pwa-android-instructions');
-        if (iosDiv && androidDiv) {
-          if (isIOS) {
-            iosDiv.style.display = 'block';
-            androidDiv.style.display = 'none';
-          } else {
-            iosDiv.style.display = 'none';
-            androidDiv.style.display = 'block';
-          }
-        }
-      }
-    }
-  });
-}
+// Fullscreen API Trigger on first touch interaction
+window.addEventListener('pointerdown', () => {
+  requestFullscreenOnAction();
+}, { passive: true, once: true });
+window.addEventListener('touchstart', () => {
+  requestFullscreenOnAction();
+}, { passive: true, once: true });

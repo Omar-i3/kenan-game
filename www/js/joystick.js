@@ -128,32 +128,23 @@ class JoystickController {
     let dy = clientY - this.baseY;
     let distance = Math.hypot(dx, dy);
 
-    // If pointer moved at least 15px from initial touch base, use joystick offset
-    if (distance >= 15) {
-      if (distance > this.maxRadius) {
-        const angle = Math.atan2(dy, dx);
-        dx = Math.cos(angle) * this.maxRadius;
-        dy = Math.sin(angle) * this.maxRadius;
-      }
-      if (this.stick) {
-        this.stick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-      }
-      this.inputVector.x = dx / this.maxRadius;
-      this.inputVector.y = dy / this.maxRadius;
-    } else {
-      // Direct direction vector relative to screen center (where player character is drawn)
-      const screenCenterX = window.innerWidth / 2;
-      const screenCenterY = window.innerHeight / 2;
-      const pdx = clientX - screenCenterX;
-      const pdy = clientY - screenCenterY;
-      const pdist = Math.hypot(pdx, pdy);
+    if (distance > 4) {
+      const angle = Math.atan2(dy, dx);
+      const clampedDist = Math.min(distance, this.maxRadius);
+      const stickX = Math.cos(angle) * clampedDist;
+      const stickY = Math.sin(angle) * clampedDist;
 
-      if (pdist > 20) {
-        this.inputVector.x = pdx / pdist;
-        this.inputVector.y = pdy / pdist;
-      } else {
-        this.inputVector = { x: 0, y: 0 };
+      if (this.stick) {
+        this.stick.style.transform = `translate(calc(-50% + ${stickX}px), calc(-50% + ${stickY}px))`;
       }
+      this.inputVector.x = stickX / this.maxRadius;
+      this.inputVector.y = stickY / this.maxRadius;
+    } else {
+      if (this.stick) {
+        this.stick.style.transform = `translate(-50%, -50%)`;
+      }
+      this.inputVector.x = 0;
+      this.inputVector.y = 0;
     }
   }
 
