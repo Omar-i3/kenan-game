@@ -1,7 +1,7 @@
 {
-  "name": "الوحش كنان - Monster Kenan",
-  "short_name": "الوحش كنان",
-  "description": "لعبة 2D حركية وكوميدية - Monster Kenan 2D Game",
+  "name": "كوابيس الشلة - Nightmares of the Squad",
+  "short_name": "كوابيس الشلة",
+  "description": "لعبة 2D حركية وكوميدية - كوابيس الشلة",
   "start_url": "./index.html",
   "id": "/monster-kenan",
   "display": "fullscreen",

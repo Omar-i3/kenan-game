@@ -961,7 +961,7 @@ class Game {
       document.getElementById('next-stage-btn').innerText = '🗺️ قائمة المراحل';
       localStorage.setItem('kenan_story_completed', 'true');
     } else if (this.currentStageId === 10) {
-      descEl.innerText = '🎉 👑 تهانينا الحارة! هدمت كنان العملاق وختمت قصة الوحش كنان بنجاح 100%! 🏆';
+      descEl.innerText = '🎉 👑 تهانينا الحارة! هدمت كنان العملاق وختمت الفصل الأول بنجاح 100%! 🏆';
       document.getElementById('next-stage-btn').innerText = '🗺️ قائمة المراحل';
     } else {
       descEl.innerText = 'أحسنت! نجحت في الهروب عبر البوابة واكتملت المرحلة بنجاح!';

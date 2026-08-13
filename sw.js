@@ -1,5 +1,5 @@
 /**
- * Service Worker for الوحش كنان (Monster Kenan) PWA
+ * Service Worker for كوابيس الشلة (Nightmares of the Squad) PWA
  * Cache-First strategy for offline gameplay support
  */
 
