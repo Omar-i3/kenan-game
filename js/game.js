@@ -939,21 +939,27 @@ class Game {
 
     // Compute dynamic adaptive camera zoom scale so characters & items are BIG, bold & crisp on mobile
     const minDim = Math.min(this.width, this.height) || 400;
-    this.zoomScale = Math.max(1.45, Math.min(2.2, 700 / minDim));
+    this.zoomScale = Math.max(1.35, Math.min(2.0, 650 / minDim));
 
-    this.ctx.save();
+    const visibleW = this.width / this.zoomScale;
+    const visibleH = this.height / this.zoomScale;
 
-    // Camera Center Tracking on Player with Zoom Scale
+    // Camera Center Tracking on Player with Boundary Clamping
     const targetX = this.player ? this.player.x : this.arenaWidth / 2;
     const targetY = this.player ? this.player.y : this.arenaHeight / 2;
 
-    this.ctx.translate(this.width / 2, this.height / 2);
-    this.ctx.scale(this.zoomScale, this.zoomScale);
-    this.ctx.translate(-Math.round(targetX), -Math.round(targetY));
+    let camX = targetX - visibleW / 2;
+    let camY = targetY - visibleH / 2;
 
-    // Update Camera bounding box for minimap culling
-    this.camera.x = targetX - (this.width / (2 * this.zoomScale));
-    this.camera.y = targetY - (this.height / (2 * this.zoomScale));
+    camX = Math.min(Math.max(camX, 0), Math.max(0, this.arenaWidth - visibleW));
+    camY = Math.min(Math.max(camY, 0), Math.max(0, this.arenaHeight - visibleH));
+
+    this.camera.x = camX;
+    this.camera.y = camY;
+
+    this.ctx.save();
+    this.ctx.scale(this.zoomScale, this.zoomScale);
+    this.ctx.translate(-Math.round(camX), -Math.round(camY));
 
     this.drawStageBackground();
     this.drawArenaGrid();
