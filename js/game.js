@@ -112,22 +112,23 @@ class Game {
     window.addEventListener('orientationchange', checkOrientation);
     checkOrientation();
 
-    // Fast Button Binder (click + touchstart)
+    // Fast & Reliable Button Binder (click + touchend)
     const bindBtn = (id, handler) => {
       const el = document.getElementById(id);
       if (!el) return;
-      let fired = false;
+      let lastTime = 0;
       const fn = (e) => {
-        if (fired) return;
-        fired = true;
-        setTimeout(() => { fired = false; }, 200);
+        const now = Date.now();
+        if (now - lastTime < 200) return;
+        lastTime = now;
         window.audioManager.unlockAudio();
         handler(e);
       };
       el.addEventListener('click', fn);
-      el.addEventListener('touchstart', (e) => {
+      el.addEventListener('touchend', (e) => {
+        if (e.cancelable) e.preventDefault();
         fn(e);
-      }, { passive: true });
+      });
     };
 
     // Mode Toggle Buttons (Endless vs Story Mode)
@@ -159,8 +160,12 @@ class Game {
     // Difficulty Buttons for Endless Mode
     const diffBtns = document.querySelectorAll('.diff-btn');
     diffBtns.forEach(btn => {
+      let lastTime = 0;
       const handler = (e) => {
-        e.stopPropagation();
+        const now = Date.now();
+        if (now - lastTime < 200) return;
+        lastTime = now;
+        if (e && e.stopPropagation) e.stopPropagation();
         window.audioManager.unlockAudio();
         diffBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
@@ -168,8 +173,11 @@ class Game {
         this.updateHighScoreDisplay();
         window.hapticsManager.triggerTac();
       };
-      btn.addEventListener('pointerdown', handler);
       btn.addEventListener('click', handler);
+      btn.addEventListener('touchend', (e) => {
+        if (e.cancelable) e.preventDefault();
+        handler(e);
+      });
     });
 
     bindBtn('start-btn', () => {
@@ -246,15 +254,22 @@ class Game {
 
     const audioBtn = document.getElementById('audio-toggle-btn');
     if (audioBtn) {
+      let lastTime = 0;
       const handler = (e) => {
-        e.stopPropagation();
+        const now = Date.now();
+        if (now - lastTime < 200) return;
+        lastTime = now;
+        if (e && e.stopPropagation) e.stopPropagation();
         window.audioManager.unlockAudio();
         const isMuted = window.audioManager.toggleMute();
         audioBtn.innerText = isMuted ? '🔇 الصوت: مكتوم' : '🔊 الصوت: مفعّل';
         window.hapticsManager.triggerTac();
       };
-      audioBtn.addEventListener('pointerdown', handler);
       audioBtn.addEventListener('click', handler);
+      audioBtn.addEventListener('touchend', (e) => {
+        if (e.cancelable) e.preventDefault();
+        handler(e);
+      });
     }
   }
 
@@ -282,8 +297,19 @@ class Game {
       `;
 
       if (isUnlocked) {
-        card.addEventListener('click', () => {
+        let cardLastTime = 0;
+        const playStage = (e) => {
+          const now = Date.now();
+          if (now - cardLastTime < 200) return;
+          cardLastTime = now;
+          if (e && e.stopPropagation) e.stopPropagation();
+          window.audioManager.unlockAudio();
           this.startStoryStage(stg.id);
+        };
+        card.addEventListener('click', playStage);
+        card.addEventListener('touchend', (e) => {
+          if (e.cancelable) e.preventDefault();
+          playStage(e);
         });
       }
 
