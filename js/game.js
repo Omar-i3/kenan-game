@@ -221,38 +221,55 @@ class Game {
 
     // Chase Monster Cards click handler
     const chaseCards = document.querySelectorAll('.chase-card');
+    const updateChaseCardSelection = (clickedCard) => {
+      const monster = clickedCard.dataset.monster;
+      if (!monster) return;
+
+      if (this.chaseSelectionType === 'SINGLE') {
+        chaseCards.forEach(c => {
+          c.classList.remove('selected');
+          const k = c.querySelector('.chase-chk');
+          if (k) k.checked = false;
+        });
+        clickedCard.classList.add('selected');
+        const chk = clickedCard.querySelector('.chase-chk');
+        if (chk) chk.checked = true;
+        this.chaseSelectedMonsters = [monster];
+      } else {
+        const chk = clickedCard.querySelector('.chase-chk');
+        const isSelected = clickedCard.classList.contains('selected');
+        if (isSelected) {
+          const selectedCount = document.querySelectorAll('.chase-card.selected').length;
+          if (selectedCount > 1) {
+            clickedCard.classList.remove('selected');
+            if (chk) chk.checked = false;
+          }
+        } else {
+          clickedCard.classList.add('selected');
+          if (chk) chk.checked = true;
+        }
+
+        const activeMonsters = [];
+        document.querySelectorAll('.chase-card.selected').forEach(c => {
+          if (c.dataset.monster) activeMonsters.push(c.dataset.monster);
+        });
+        this.chaseSelectedMonsters = activeMonsters.length > 0 ? activeMonsters : ['kenan'];
+      }
+      window.hapticsManager.triggerTac();
+    };
+
     chaseCards.forEach(card => {
       let lastTime = 0;
       const fn = (e) => {
+        if (e && e.cancelable && e.type === 'touchstart') e.preventDefault();
         const now = Date.now();
-        if (now - lastTime < 250) return;
+        if (now - lastTime < 150) return;
         lastTime = now;
         window.audioManager.unlockAudio();
-
-        const chk = card.querySelector('.chase-chk');
-        if (!chk) return;
-
-        if (this.chaseSelectionType === 'SINGLE') {
-          chaseCards.forEach(c => {
-            c.classList.remove('selected');
-            const k = c.querySelector('.chase-chk');
-            if (k) k.checked = false;
-          });
-          card.classList.add('selected');
-          chk.checked = true;
-        } else {
-          const willBeChecked = !chk.checked;
-          if (!willBeChecked) {
-            const checkedCount = document.querySelectorAll('.chase-chk:checked').length;
-            if (checkedCount <= 1) return;
-          }
-          chk.checked = willBeChecked;
-          if (willBeChecked) card.classList.add('selected');
-          else card.classList.remove('selected');
-        }
-        window.hapticsManager.triggerTac();
+        updateChaseCardSelection(card);
       };
 
+      card.addEventListener('touchstart', fn, { passive: false });
       card.onpointerdown = fn;
       card.onclick = fn;
     });
@@ -487,7 +504,10 @@ class Game {
     if (this.player.bananaTraps > 0) {
       this.player.bananaTraps--;
       document.getElementById('banana-count').innerText = this.player.bananaTraps;
-      this.bananaTraps.push(new window.Entities.BananaTrap(this.player.x, this.player.y));
+      const dropDist = 40;
+      const dropX = this.player.x - Math.cos(this.player.angle) * dropDist;
+      const dropY = this.player.y - Math.sin(this.player.angle) * dropDist;
+      this.bananaTraps.push(new window.Entities.BananaTrap(dropX, dropY));
       window.hapticsManager.triggerTac();
     }
   }
@@ -631,20 +651,19 @@ class Game {
     this.setupBaseArena();
     this.activeChaseMonsters = [];
     this.monsterToolItems = [];
+    this.monsterProjectiles = [];
     this.monsterToolSpawnTimer = 0;
 
-    // Collect checked monsters from parameter or chase screen checkboxes
     let selectedKeys = [];
     if (monsters && Array.isArray(monsters) && monsters.length > 0) {
       selectedKeys = [...monsters];
     } else {
-      const chks = document.querySelectorAll('.chase-chk:checked');
-      chks.forEach(chk => {
-        const card = chk.closest('.chase-card');
-        if (card && card.dataset.monster) {
-          selectedKeys.push(card.dataset.monster);
-        }
+      document.querySelectorAll('.chase-card.selected').forEach(card => {
+        if (card.dataset.monster) selectedKeys.push(card.dataset.monster);
       });
+      if (selectedKeys.length === 0 && this.chaseSelectedMonsters && this.chaseSelectedMonsters.length > 0) {
+        selectedKeys = [...this.chaseSelectedMonsters];
+      }
     }
 
     if (selectedKeys.length === 0) selectedKeys.push('kenan');
@@ -686,7 +705,9 @@ class Game {
     document.getElementById('victory-screen').classList.add('hidden');
     document.getElementById('hud-layer').classList.remove('hidden');
 
-    const chaseAudioMonster = selectedKeys.includes('kenan') ? 'kenan' : (selectedKeys.length === 1 ? selectedKeys[0] : 'other');
+    const chaseAudioMonster = (this.chaseSelectionType === 'GROUP' || selectedKeys.length > 1)
+      ? 'all'
+      : (selectedKeys[0] || 'kenan');
     window.audioManager.startChase(chaseAudioMonster);
   }
 
@@ -933,21 +954,21 @@ class Game {
     let catchSpeechOptions;
     if (caughtType === 'aseel') {
       catchSpeechOptions = [
-        { voice: 'aseel_1', text: `💬 أسيل: "وين رايح؟ أنا وراك! 🪄"` },
-        { voice: 'aseel_2', text: `💬 أسيل: "العصا السحرية جاياك! 🪄"` },
-        { voice: 'aseel_3', text: `💬 أسيل: "صدتك بالسحر! ✨"` }
+        { voice: 'aseel_1', text: `💬 أسيل: "وين رايح؟ انا وراك! 🪄"` },
+        { voice: 'aseel_2', text: `💬 أسيل: "ما بتحب تلعب معي؟ 🪄"` },
+        { voice: 'aseel_3', text: `💬 أسيل: "وقف! بدي اسلم عليك بس 🪄"` }
       ];
     } else if (caughtType === 'elias') {
       catchSpeechOptions = [
         { voice: 'elias_1', text: `💬 إلياس: "الهروب لا يليق بمقامي! 🎮"` },
-        { voice: 'elias_2', text: `💬 إلياس: "جمّدتك خلاص! 🎮"` },
-        { voice: 'elias_3', text: `💬 إلياس: "ما رح تقدر تتحرك! 🎮"` }
+        { voice: 'elias_2', text: `💬 إلياس: "استسلم فوزي حتمي 🎮"` },
+        { voice: 'elias_3', text: `💬 إلياس: "تقبل مصيرك بكرامة 🎮"` }
       ];
     } else if (caughtType === 'qamar') {
       catchSpeechOptions = [
-        { voice: 'qamar_1', text: `💬 قمر: "بتجري مثل الدجاجة! 👑"` },
-        { voice: 'qamar_2', text: `💬 قمر: "تاج الأميرة صادك! 👑"` },
-        { voice: 'qamar_3', text: `💬 قمر: "احذر التاج! 👑"` }
+        { voice: 'qamar_1', text: `💬 قمر: "بتجري متل الدجاجة 👑"` },
+        { voice: 'qamar_2', text: `💬 قمر: "شكلك يموت ضحك وانت خايف 👑"` },
+        { voice: 'qamar_3', text: `💬 قمر: "خلاص استسلمت بدري؟ 👑"` }
       ];
     } else {
       catchSpeechOptions = [

@@ -1871,9 +1871,9 @@ class ChaseMonster {
       this.themeColor = '#aa00ff';
       this.img = ASSET_IMAGES['aseel'];
       this.voiceQuoteMap = [
-        { voice: 'aseel_1', text: 'وين رايح؟ أنا وراك' },
-        { voice: 'aseel_2', text: 'العصا السحرية جاياك!' },
-        { voice: 'aseel_3', text: 'رح أبطئ حركتك!' }
+        { voice: 'aseel_1', text: 'وين رايح؟ انا وراك!' },
+        { voice: 'aseel_2', text: 'ما بتحب تلعب معي؟' },
+        { voice: 'aseel_3', text: 'وقف! بدي اسلم عليك بس' }
       ];
       this.quotes = this.voiceQuoteMap.map(q => q.text);
       this.toolType = 'wand';
@@ -1884,9 +1884,9 @@ class ChaseMonster {
       this.themeColor = '#00f0ff';
       this.img = ASSET_IMAGES['elias'];
       this.voiceQuoteMap = [
-        { voice: 'elias_1', text: 'الهروب لا يليق بمقامي' },
-        { voice: 'elias_2', text: 'جمّدت تحكمك!' },
-        { voice: 'elias_3', text: 'ما رح تقدر تتحرك!' }
+        { voice: 'elias_1', text: 'الهروب لا يليق بمقامي!' },
+        { voice: 'elias_2', text: 'استسلم فوزي حتمي' },
+        { voice: 'elias_3', text: 'تقبل مصيرك بكرامة' }
       ];
       this.quotes = this.voiceQuoteMap.map(q => q.text);
       this.toolType = 'controller';
@@ -1897,9 +1897,9 @@ class ChaseMonster {
       this.themeColor = '#ff66cc';
       this.img = ASSET_IMAGES['qamar'];
       this.voiceQuoteMap = [
-        { voice: 'qamar_1', text: 'بتجري مثل الدجاجة' },
-        { voice: 'qamar_2', text: 'تاج الأميرة يعكس اتجاهك!' },
-        { voice: 'qamar_3', text: 'احذر التاج!' }
+        { voice: 'qamar_1', text: 'بتجري متل الدجاجة' },
+        { voice: 'qamar_2', text: 'شكلك يموت ضحك وانت خايف' },
+        { voice: 'qamar_3', text: 'خلاص استسلمت بدري؟' }
       ];
       this.quotes = this.voiceQuoteMap.map(q => q.text);
       this.toolType = 'tiara';
