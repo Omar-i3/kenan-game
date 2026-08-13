@@ -112,6 +112,24 @@ canvas#gameCanvas {
   animation: flashText 0.3s infinite alternate;
 }
 
+.jumpscare-speech-bubble {
+  background: rgba(255, 255, 255, 0.95);
+  color: #000;
+  font-size: 1.25rem;
+  font-weight: 900;
+  padding: 8px 18px;
+  border-radius: 20px;
+  margin-top: 10px;
+  box-shadow: 0 0 20px rgba(255, 204, 0, 0.8), 0 4px 10px rgba(0,0,0,0.5);
+  border: 3px solid var(--secondary-color);
+  animation: popIn 0.3s ease;
+  white-space: nowrap;
+}
+
+.jumpscare-speech-bubble.hidden {
+  display: none !important;
+}
+
 @keyframes flashText {
   0% { transform: scale(0.95); opacity: 0.8; }
   100% { transform: scale(1.08); opacity: 1; }
@@ -260,7 +278,48 @@ button * {
 
 /* Stage Cards Grid Modal */
 .story-stages-panel {
-  max-width: 650px;
+  max-width: 680px;
+}
+
+/* Chapter Tabs in Story Mode */
+.chapter-tabs-bar {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.chapter-tab {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #ddd;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chapter-tab.active {
+  background: var(--accent-cyan);
+  color: #000;
+  border-color: #fff;
+  box-shadow: 0 0 10px var(--accent-cyan);
+}
+
+.chapter-header-badge {
+  grid-column: 1 / -1;
+  background: linear-gradient(90deg, rgba(0,240,255,0.2) 0%, rgba(255,0,100,0.2) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 0.82rem;
+  font-weight: 900;
+  color: var(--secondary-color);
+  text-align: right;
+  margin-top: 6px;
 }
 
 .stage-cards-grid {
@@ -347,7 +406,7 @@ button * {
 /* HUD Top Objective Banner */
 .hud-objective-banner {
   position: absolute;
-  top: 14px;
+  top: 60px;
   left: 50%;
   transform: translateX(-50%);
   background: rgba(15, 12, 32, 0.88);
@@ -379,7 +438,7 @@ button * {
   border-radius: 10px;
 }
 
-/* Giant Kenan Boss Health Bar HUD */
+/* Giant Boss Health Bar HUD (Bug 9 Fix: top: 10px; z-index: 100) */
 .boss-health-container {
   position: absolute;
   top: 10px;
@@ -391,13 +450,13 @@ button * {
   border: 2px solid var(--danger-color);
   box-shadow: 0 0 20px rgba(255, 0, 68, 0.5);
   border-radius: 14px;
-  padding: 6px 12px;
+  padding: 5px 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 3px;
   backdrop-filter: blur(6px);
-  z-index: 8;
+  z-index: 100;
 }
 
 .boss-health-container.hidden {
@@ -769,11 +828,144 @@ button * {
   overflow: hidden;
 }
 
+/* Debuff HUD Status Bar Indicator */
+.debuff-indicator {
+  position: absolute;
+  top: 55px;
+  right: 110px;
+  background: rgba(255, 0, 68, 0.88);
+  border: 1.5px solid var(--secondary-color);
+  border-radius: 12px;
+  padding: 4px 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 0 12px rgba(255, 0, 68, 0.6);
+  font-size: 0.82rem;
+  font-weight: 900;
+  color: #fff;
+  animation: debuffPulse 0.6s infinite alternate;
+}
+
+.debuff-indicator.hidden {
+  display: none !important;
+}
+
+@keyframes debuffPulse {
+  0% { transform: scale(0.95); opacity: 0.85; }
+  100% { transform: scale(1.05); opacity: 1; }
+}
+
+/* Chase Mode Selection Panel & Cards Grid */
+.chase-panel {
+  max-width: 680px;
+}
+
+.chase-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 8px 0 12px 0;
+  width: 100%;
+}
+
+.chase-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  padding: 8px 4px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-height: 105px;
+}
+
+.chase-card:active {
+  transform: scale(0.95);
+}
+
+.chase-card.selected {
+  background: linear-gradient(135deg, rgba(255, 0, 68, 0.25) 0%, rgba(170, 0, 255, 0.3) 100%);
+  border-color: var(--secondary-color);
+  box-shadow: 0 0 18px rgba(255, 204, 0, 0.5), inset 0 0 10px rgba(255, 204, 0, 0.2);
+}
+
+.chase-card-img {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  margin-bottom: 4px;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.6));
+  transition: transform 0.2s ease;
+}
+
+.chase-card.selected .chase-card-img {
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 10px var(--secondary-color));
+}
+
+.chase-card-title {
+  font-size: 0.88rem;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 2px;
+}
+
+.chase-card-desc {
+  font-size: 0.68rem;
+  color: #ddd;
+  line-height: 1.2;
+}
+
 .powerup-bar-fill {
   height: 100%;
   background: var(--accent-green);
   width: 100%;
   transition: width 0.1s linear;
+}
+
+/* Slipper Drop Alert HUD Banner */
+.slipper-alert-banner {
+  position: absolute;
+  top: 52px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 12, 32, 0.92);
+  border: 2px solid var(--secondary-color);
+  box-shadow: 0 0 20px rgba(255, 204, 0, 0.6);
+  color: #fff;
+  padding: 6px 18px;
+  border-radius: 20px;
+  font-size: 0.95rem;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  backdrop-filter: blur(8px);
+  z-index: 9;
+  white-space: nowrap;
+  animation: slipperBannerPulse 0.8s infinite alternate;
+}
+
+.slipper-alert-banner.hidden {
+  display: none !important;
+}
+
+.slipper-banner-img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 8px #ffcc00);
+}
+
+@keyframes slipperBannerPulse {
+  0% { transform: translateX(-50%) scale(0.96); box-shadow: 0 0 12px rgba(255, 204, 0, 0.4); }
+  100% { transform: translateX(-50%) scale(1.04); box-shadow: 0 0 24px rgba(255, 204, 0, 0.8); }
 }
 
 /* Rage Alert HUD Banner */
@@ -1001,6 +1193,94 @@ button * {
 
 @media (max-width: 480px) {
   #minimap-container { width: 80px; height: 60px; top: 50px; left: 8px; }
-  .skill-btn { width: 46px; height: 46px; font-size: 1.15rem; }
+  .skill-btn { width: 56px; height: 56px; font-size: 1.35rem; }
+  .action-buttons-group { bottom: 12px; right: 12px; gap: 12px; }
   .boss-health-container { width: 85%; top: 6px; padding: 3px 6px; }
+}
+
+/* Floating In-Game Quick Toast Notification */
+.game-toast-alert {
+  position: absolute;
+  bottom: 95px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(15, 12, 35, 0.94);
+  border: 2px solid #ffe600;
+  color: #ffe600;
+  font-family: 'Cairo', sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  padding: 8px 20px;
+  border-radius: 30px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7), 0 0 15px rgba(255, 230, 0, 0.4);
+  pointer-events: none;
+  z-index: 120;
+  opacity: 0;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.game-toast-alert.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* PWA Force Install Overlay Styles */
+.pwa-overlay {
+  display: none; /* مخفي افتراضياً ولا يظهر إلا عند توفر التثبيت */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(10, 10, 18, 0.96);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 99999;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.pwa-modal {
+  background: #1a1a2e;
+  border: 2px solid #e94560;
+  padding: 30px 20px;
+  border-radius: 20px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 0 30px rgba(233, 69, 96, 0.4);
+  color: #ffffff;
+  font-family: inherit;
+}
+
+.pwa-modal h2 {
+  margin-top: 0;
+  color: #ff2e63;
+  font-size: 1.4rem;
+}
+
+.pwa-modal p {
+  color: #eaeaea;
+  font-size: 1rem;
+  line-height: 1.5;
+  margin: 15px 0 25px 0;
+}
+
+.pwa-btn {
+  padding: 15px 30px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #ffffff;
+  background: linear-gradient(45deg, #ff416c, #ff4b2b);
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  box-shadow: 0 5px 15px rgba(255, 75, 43, 0.4);
+  transition: transform 0.2s ease;
+}
+
+.pwa-btn:active {
+  transform: scale(0.95);
 }

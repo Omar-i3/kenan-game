@@ -2011,3 +2011,59 @@ class Game {
 window.addEventListener('load', () => {
   window.game = new Game();
 });
+
+// --- PWA Service Worker Registration & Force Install Logic ---
+
+// 1. تسجيل الـ Service Worker مع دعم التحديث التلقائي الفوري
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').then((reg) => {
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        if (newWorker) {
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'activated') {
+              // إعادة تحميل الصفحة فوراً عند اكتشاف إصدار جديد
+              window.location.reload();
+            }
+          });
+        }
+      });
+    }).catch((err) => {
+      console.log('ServiceWorker registration failed: ', err);
+    });
+  });
+}
+
+// 2. التحكم في جدار التثبيت الإجباري
+let deferredInstallPrompt = null;
+const pwaForceOverlay = document.getElementById('pwa-force-install-overlay');
+const pwaInstallButton = document.getElementById('pwa-install-btn');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  // منع النافذة التلقائية للمتصفح
+  e.preventDefault();
+  deferredInstallPrompt = e;
+
+  // إظهار جدار الحجب الإجباري لمنع اللعب قبل التثبيت
+  if (pwaForceOverlay) {
+    pwaForceOverlay.style.display = 'flex';
+  }
+});
+
+if (pwaInstallButton) {
+  pwaInstallButton.addEventListener('click', () => {
+    if (deferredInstallPrompt) {
+      deferredInstallPrompt.prompt();
+      deferredInstallPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+          // إخفاء الشاشة بعد قبول التثبيت
+          if (pwaForceOverlay) {
+            pwaForceOverlay.style.display = 'none';
+          }
+        }
+        deferredInstallPrompt = null;
+      });
+    }
+  });
+}

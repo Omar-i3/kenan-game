@@ -1223,3 +1223,64 @@ button * {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
+
+/* PWA Force Install Overlay Styles */
+.pwa-overlay {
+  display: none; /* مخفي افتراضياً ولا يظهر إلا عند توفر التثبيت */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(10, 10, 18, 0.96);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 99999;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.pwa-modal {
+  background: #1a1a2e;
+  border: 2px solid #e94560;
+  padding: 30px 20px;
+  border-radius: 20px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 0 30px rgba(233, 69, 96, 0.4);
+  color: #ffffff;
+  font-family: inherit;
+}
+
+.pwa-modal h2 {
+  margin-top: 0;
+  color: #ff2e63;
+  font-size: 1.4rem;
+}
+
+.pwa-modal p {
+  color: #eaeaea;
+  font-size: 1rem;
+  line-height: 1.5;
+  margin: 15px 0 25px 0;
+}
+
+.pwa-btn {
+  padding: 15px 30px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #ffffff;
+  background: linear-gradient(45deg, #ff416c, #ff4b2b);
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  box-shadow: 0 5px 15px rgba(255, 75, 43, 0.4);
+  transition: transform 0.2s ease;
+}
+
+.pwa-btn:active {
+  transform: scale(0.95);
+}

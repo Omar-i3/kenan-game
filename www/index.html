@@ -2,9 +2,14 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>الوحش كنان - Monster Kenan 2D</title>
-  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>كوابيس الشلة - Nightmares of the Squad</title>
+
+  <!-- No-Cache Meta Tags (Cache Busting) -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
   <!-- PWA & Mobile Icons -->
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" type="image/png" sizes="512x512" href="./icons/icon-512x512.png">
@@ -20,7 +25,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#ff3366">
 
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./style.css?v=2.5">
 </head>
 <body>
 
@@ -33,8 +38,9 @@
 
     <!-- Fullscreen Jumpscare Overlay on Game Over -->
     <div id="jumpscare-overlay" class="jumpscare-overlay hidden">
-      <img src="./kenan.png" alt="Kenan Jumpscare" class="jumpscare-img">
-      <div class="jumpscare-text">صادك كنان! 😱💥</div>
+      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" alt="Jumpscare" class="jumpscare-img">
+      <div class="jumpscare-text">صادك الكابوس! 😱💥</div>
+      <div id="jumpscare-speech" class="jumpscare-speech-bubble">💬 "أكلتك خلاص!"</div>
     </div>
 
     <!-- Orientation Rotate Device Prompt Overlay -->
@@ -111,6 +117,18 @@
         </div>
       </div>
 
+      <!-- Monster Debuff Status HUD Indicator -->
+      <div id="debuff-indicator" class="debuff-indicator hidden">
+        <span id="debuff-icon" class="debuff-icon">🪄</span>
+        <span id="debuff-text" class="debuff-text">متباطئ!</span>
+      </div>
+
+      <!-- Slipper Drop Alert HUD Banner -->
+      <div id="slipper-alert-banner" class="slipper-alert-banner hidden">
+        <img src="./assets/item_slipper.png" class="slipper-banner-img" alt="زنوبة" />
+        <span>👡 بدأت الزنوبات بالانتشار في الماب! اجمعها وارمِ كنان!</span>
+      </div>
+
       <!-- Rage Mode Warning Banner -->
       <div id="rage-banner" class="rage-alert-banner hidden">
         🔥 وابل الغضب! كنان المعصب جداً! 🔥
@@ -120,16 +138,19 @@
     <!-- Start Screen Overlay -->
     <div id="start-screen" class="screen-overlay">
       <div class="glass-panel">
-        <h1 class="game-title">الوحش كنان</h1>
-        <p class="game-subtitle">اختر طور اللعب واهرب من غضب كنان!</p>
+        <h1 class="game-title">كوابيس الشلة</h1>
+        <p class="game-subtitle">اختار كابوسك... واهرب إذا تقدر! 😈</p>
 
         <!-- Mode Select Buttons -->
         <div class="mode-select-group">
           <button id="mode-endless-btn" class="mode-btn active">
-            <span>🏃 طور الصمود (Endless)</span>
+            <span>🏃 طور الصمود</span>
+          </button>
+          <button id="mode-chase-btn" class="mode-btn">
+            <span>⚔️ طور المطاردة</span>
           </button>
           <button id="mode-story-btn" class="mode-btn">
-            <span>📖 طور القصة (10 مراحل)</span>
+            <span>📖 طور القصة</span>
           </button>
         </div>
 
@@ -139,18 +160,18 @@
             👑 الرقم القياسي: <span id="start-high-score-val">0.0</span> ثانية
           </div>
 
-          <div class="section-label">اختر مستوى الصعوبة:</div>
+          <div class="section-label">اختر مستوى الكابوس:</div>
           <div class="difficulty-group">
             <button class="diff-btn active" data-diff="easy">
-              <span>😴 كنان النعسان (سهل)</span>
+              <span>😴 كابوس خفيف (سهل)</span>
               <span class="diff-desc">حركة بطيئة واستجابة متأخرة</span>
             </button>
             <button class="diff-btn" data-diff="normal">
-              <span>🏃 كنان الطبيعي (متوسط)</span>
+              <span>🏃 كابوس حقيقي (متوسط)</span>
               <span class="diff-desc">تحدي قياسي ومتوازن</span>
             </button>
             <button class="diff-btn" data-diff="hard">
-              <span>😡 كنان المعصب (صعب)</span>
+              <span>😡 كابوس مرعب (صعب)</span>
               <span class="diff-desc">سرعة عالية جداً وارتجاف بصري</span>
             </button>
           </div>
@@ -160,9 +181,9 @@
 
         <!-- Story Mode Options -->
         <div id="story-options-box" class="hidden">
-          <p class="story-mode-desc">انطلق في 10 مراحل حماسية، حُل الألغاز واهزم كنان العملاق في قتال البوس الأخير!</p>
+          <p class="story-mode-desc">انطلق في 20 مرحلة من الكوابيس، واجه الشلة كلها واختم القصة بالكامل!</p>
           <button id="open-story-stages-btn" class="btn-primary" style="background: linear-gradient(135deg, #00f0ff 0%, #0088cc 100%);">
-            🗺️ اختيار المراحل (1-10)
+            🗺️ اختيار المراحل (1-21)
           </button>
         </div>
 
@@ -170,17 +191,85 @@
       </div>
     </div>
 
+    <!-- Chase Mode Selection Screen Modal Overlay -->
+    <div id="chase-mode-screen" class="screen-overlay hidden">
+      <div class="glass-panel chase-panel">
+        <h2 class="game-title" style="font-size: 1.7rem; color: var(--secondary-color);">⚔️ طور المطاردة (Chase Mode)</h2>
+        <p class="game-subtitle" style="margin-bottom: 6px;">اختار كابوسك... أو واجههم كلهم إذا تجرأت! 😈</p>
+
+        <!-- Chase Mode Type Selector -->
+        <div class="mode-select-group" style="margin-bottom: 8px;">
+          <button id="chase-mode-single-btn" class="mode-btn active">
+            <span>👤 مطارد فردي</span>
+          </button>
+          <button id="chase-mode-group-btn" class="mode-btn">
+            <span>👥 هجوم شامل</span>
+          </button>
+        </div>
+
+        <div class="high-score-badge" style="margin-bottom: 8px;">
+          👑 أعلى صمود بالمطاردة: <span id="chase-high-score-val">0.0</span> ثانية
+        </div>
+
+        <!-- 4 Monster Selection Cards Grid -->
+        <div class="chase-cards-grid">
+          <!-- Card 1: Kenan -->
+          <div class="chase-card selected" data-monster="kenan">
+            <input type="checkbox" id="chk-kenan" class="chase-chk" checked hidden />
+            <img src="./kenan.png" class="chase-card-img" alt="كنان" />
+            <div class="chase-card-title">👹 كنان</div>
+            <div class="chase-card-desc">رمي الزنوبة والسرعة 👡</div>
+          </div>
+          <!-- Card 2: Aseel -->
+          <div class="chase-card" data-monster="aseel">
+            <input type="checkbox" id="chk-aseel" class="chase-chk" hidden />
+            <img src="./assets/aseel.png" class="chase-card-img" alt="أسيل" />
+            <div class="chase-card-title">🪄 أسيل</div>
+            <div class="chase-card-desc">العصا السحرية (تبطيء) 🪄</div>
+          </div>
+          <!-- Card 3: Elias -->
+          <div class="chase-card" data-monster="elias">
+            <input type="checkbox" id="chk-elias" class="chase-chk" hidden />
+            <img src="./assets/elias.png" class="chase-card-img" alt="إلياس" />
+            <div class="chase-card-title">🎮 إلياس</div>
+            <div class="chase-card-desc">الكنترولر (تجميد التحكم) 🎮</div>
+          </div>
+          <!-- Card 4: Qamar -->
+          <div class="chase-card" data-monster="qamar">
+            <input type="checkbox" id="chk-qamar" class="chase-chk" hidden />
+            <img src="./assets/qamar.png" class="chase-card-img" alt="قمر" />
+            <div class="chase-card-title">👑 قمر</div>
+            <div class="chase-card-desc">تاج الأميرة (عكس الاتجاهات) 👑</div>
+          </div>
+        </div>
+
+        <button id="start-chase-btn" class="btn-primary" style="background: linear-gradient(135deg, #ff0044 0%, #aa00ff 100%); margin-top: 8px;">
+          🔥 ابدأ المطاردة
+        </button>
+        <button id="close-chase-btn" class="btn-secondary" style="margin-top: 6px;">🔙 العودة للقائمة الرئيسية</button>
+      </div>
+    </div>
+
     <!-- Stage Select Screen Modal Overlay -->
     <div id="stage-select-screen" class="screen-overlay hidden">
       <div class="glass-panel story-stages-panel">
-        <h2 class="game-title" style="font-size: 1.8rem; color: var(--accent-cyan);">📖 طور القصة - اختيار المراحل</h2>
-        <p class="game-subtitle" style="margin-bottom: 10px;">أكمل المهمة في كل مرحلة لفتح المرحلة التالية!</p>
+        <h2 class="game-title" style="font-size: 1.6rem; color: var(--accent-cyan);">📖 طور القصة: رحلة الهروب (20 مرحلة)</h2>
+        <p class="game-subtitle" style="margin-bottom: 6px;">واجه الوحوش الـ 4 وافتح الفصول لتختم القصة 100%!</p>
 
-        <div id="stage-cards-grid" class="stage-cards-grid">
-          <!-- Dynamically populated 10 Stage Cards -->
+        <!-- Chapter Filter Tabs -->
+        <div class="chapter-tabs-bar">
+          <button class="chapter-tab active" data-chapter="1">👹 كنان (1-5)</button>
+          <button class="chapter-tab" data-chapter="2">🪄 أسيل (6-10)</button>
+          <button class="chapter-tab" data-chapter="3">🎮 إلياس (11-15)</button>
+          <button class="chapter-tab" data-chapter="4">👑 قمر (16-20)</button>
+          <button class="chapter-tab" data-chapter="all">🌟 الكل (1-20)</button>
         </div>
 
-        <button id="close-stages-btn" class="btn-secondary" style="margin-top: 12px;">🔙 العودة للقائمة الرئيسية</button>
+        <div id="stage-cards-grid" class="stage-cards-grid">
+          <!-- Dynamically populated 20 Stage Cards -->
+        </div>
+
+        <button id="close-stages-btn" class="btn-secondary" style="margin-top: 8px;">🔙 العودة للقائمة الرئيسية</button>
       </div>
     </div>
 
@@ -188,7 +277,7 @@
     <div id="pause-screen" class="screen-overlay hidden">
       <div class="glass-panel">
         <h2 class="game-title" style="font-size: 1.8rem;">توقف مؤقت ⏸️</h2>
-        <p class="game-subtitle">خذ نفسك قبل لا يصيدك كنان!</p>
+        <p class="game-subtitle">خذ نفسك قبل لا يصيدك الكابوس!</p>
 
         <button id="resume-btn" class="btn-primary" style="margin-top: 12px;">▶️ استئناف اللعب</button>
         <button id="pause-main-menu-btn" class="btn-secondary" style="margin-top: 8px;">🏠 القائمة الرئيسية</button>
@@ -199,7 +288,7 @@
     <div id="game-over-screen" class="screen-overlay hidden">
       <div class="glass-panel">
         <h2 class="game-title" style="color: var(--danger-color); text-shadow: 0 0 10px rgba(255, 0, 68, 0.6);">
-          صادك كنان! 😱
+          صادك الكابوس! 😱
         </h2>
 
         <div id="loss-quote" class="loss-quote">
@@ -255,24 +344,20 @@
   </div>
 
   <!-- Game Logic Modules -->
-  <script src="./js/audio.js"></script>
-  <script src="./js/audio_effects.js"></script>
-  <script src="./js/haptics.js"></script>
-  <script src="./js/joystick.js"></script>
-  <script src="./js/entities.js"></script>
-  <script src="./js/game.js"></script>
+  <script src="./js/audio.js?v=2.5"></script>
+  <script src="./js/audio_effects.js?v=2.5"></script>
+  <script src="./js/haptics.js?v=2.5"></script>
+  <script src="./js/joystick.js?v=2.5"></script>
+  <script src="./js/entities.js?v=2.5"></script>
+  <script src="./js/game.js?v=2.5"></script>
 
-  <!-- PWA Service Worker Registration -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').then((reg) => {
-          console.log('[PWA] Service Worker registered:', reg.scope);
-        }).catch((err) => {
-          console.warn('[PWA] Service Worker registration failed:', err);
-        });
-      });
-    }
-  </script>
+  <!-- PWA Force Install Overlay -->
+  <div id="pwa-force-install-overlay" class="pwa-overlay">
+    <div class="pwa-modal">
+      <h2>🎮 مطلوب تثبيت التطبيق للمتابعة!</h2>
+      <p>للحصول على أفضل أداء وأصوات كاملة بدون تقطيع على جوالك، يرجى تثبيت التطبيق على جهازك أولاً.</p>
+      <button id="pwa-install-btn" class="pwa-btn">📥 تثبيت اللعبة الآن</button>
+    </div>
+  </div>
 </body>
 </html>

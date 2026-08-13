@@ -15,7 +15,16 @@ const VOICE_FILES = {
   voice_assabt:  './voice_assabt.mp3',
   voice_sadtak:  './voice_sadtak.mp3',
   voice_akaltak: './voice_akaltak.mp3',
-  w7sh:          './w7sh.mp3'
+  w7sh:          './w7sh.mp3',
+  aseel_1:       './assets/aseel_1.mp3',
+  aseel_2:       './assets/aseel_2.mp3',
+  aseel_3:       './assets/aseel_3.mp3',
+  elias_1:       './assets/elias_1.mp3',
+  elias_2:       './assets/elias_2.mp3',
+  elias_3:       './assets/elias_3.mp3',
+  qamar_1:       './assets/qamar_1.mp3',
+  qamar_2:       './assets/qamar_2.mp3',
+  qamar_3:       './assets/qamar_3.mp3'
 };
 
 // Asset folder fallback paths (for Capacitor www builds)
@@ -29,7 +38,16 @@ const ASSET_VOICE_FILES = {
   voice_assabt:  './assets/voice_assabt.mp3',
   voice_sadtak:  './assets/voice_sadtak.mp3',
   voice_akaltak: './assets/voice_akaltak.mp3',
-  w7sh:          './assets/w7sh.mp3'
+  w7sh:          './assets/w7sh.mp3',
+  aseel_1:       './assets/aseel_1.mp3',
+  aseel_2:       './assets/aseel_2.mp3',
+  aseel_3:       './assets/aseel_3.mp3',
+  elias_1:       './assets/elias_1.mp3',
+  elias_2:       './assets/elias_2.mp3',
+  elias_3:       './assets/elias_3.mp3',
+  qamar_1:       './assets/qamar_1.mp3',
+  qamar_2:       './assets/qamar_2.mp3',
+  qamar_3:       './assets/qamar_3.mp3'
 };
 
 class AudioManager {
@@ -70,9 +88,16 @@ class AudioManager {
       }
     } catch (e) {}
 
-    // Create & preload chase audio
-    this.chaseAudio = this._createAudio('./3ooo.mp3', true);
-    this.chaseAudio.loop = true;
+    // Create & preload monster chase loops
+    this.chaseAudioMap = {
+      kenan: this._createAudio('./3ooo.mp3', true),
+      elias: this._createAudio('./assets/3oo.elias.mp3', true),
+      qamar: this._createAudio('./assets/3oo.qamar.mp3', true)
+    };
+    for (const audio of Object.values(this.chaseAudioMap)) {
+      audio.loop = true;
+    }
+    this.activeChaseAudio = null;
 
     // Create & preload impact audio
     this.impactAudio = this._createAudio('./w7sh.mp3', true);
@@ -86,23 +111,31 @@ class AudioManager {
   }
 
   /**
-   * Create an Audio element with preload, fallback path, and tracking.
+   * Create an Audio element with preload, dynamic cache-busting timestamp, multiple fallback paths, and tracking.
    */
   _createAudio(path, addToPool = true) {
     const audio = new Audio();
     audio.preload = 'auto';
     audio._originalPath = path;
-    audio._triedAsset = false;
+    audio._fallbackIndex = 0;
 
-    // Try loading from provided path first
-    audio.src = path;
+    const filename = path.split('/').pop();
+    const possiblePaths = [
+      path,
+      './assets/' + filename,
+      './' + filename,
+      'assets/' + filename,
+      filename
+    ];
+
+    const withCacheBust = (p) => p + (p.includes('?') ? '&' : '?') + 't=' + Date.now();
+
+    audio.src = withCacheBust(possiblePaths[0]);
 
     audio.onerror = () => {
-      if (!audio._triedAsset) {
-        audio._triedAsset = true;
-        // Try ./assets/ fallback for Capacitor/www builds
-        const filename = path.split('/').pop();
-        audio.src = './assets/' + filename;
+      audio._fallbackIndex = (audio._fallbackIndex || 0) + 1;
+      if (audio._fallbackIndex < possiblePaths.length) {
+        audio.src = withCacheBust(possiblePaths[audio._fallbackIndex]);
         audio.load();
       }
     };
@@ -142,6 +175,11 @@ class AudioManager {
           const p = audio.play();
           if (p !== undefined) {
             p.then(() => {
+              // NEVER pause if this audio was started as the active chase music!
+              if (this.isPlayingChase && audio === this.activeChaseAudio) {
+                audio.volume = Math.max(0, Math.min(1, this.baseVolume * this.voiceDuckingMultiplier));
+                return;
+              }
               audio.pause();
               audio.currentTime = 0;
               audio.volume = 1.0;
@@ -149,8 +187,10 @@ class AudioManager {
               audio.volume = 1.0;
             });
           } else {
-            audio.pause();
-            audio.currentTime = 0;
+            if (!this.isPlayingChase || audio !== this.activeChaseAudio) {
+              audio.pause();
+              audio.currentTime = 0;
+            }
             audio.volume = 1.0;
           }
         } catch (e) {
@@ -166,41 +206,65 @@ class AudioManager {
   }
 
   // ─── Chase Music (looping background) ───
-  startChase() {
+  startChase(monsterType = 'kenan') {
     if (this.isMuted) return;
     this.unlockAudio();
     this.isPlayingChase = true;
+    this.currentChaseMonster = monsterType;
 
-    if (this.chaseAudio) {
+    this.stopChaseLoopOnly();
+
+    let targetAudio = null;
+    const m = (monsterType || 'kenan').toLowerCase();
+    if (m === 'kenan' || m === 'all') {
+      targetAudio = this.chaseAudioMap.kenan;
+    } else if (m === 'elias') {
+      targetAudio = this.chaseAudioMap.elias;
+    } else if (m === 'qamar') {
+      targetAudio = this.chaseAudioMap.qamar;
+    }
+
+    if (targetAudio) {
+      this.activeChaseAudio = targetAudio;
       try {
-        this.chaseAudio.currentTime = 0;
-        this.chaseAudio.playbackRate = 1.0;
+        targetAudio.currentTime = 0;
+        targetAudio.playbackRate = 1.0;
         this.applyCurrentVolume();
-        const p = this.chaseAudio.play();
+        const p = targetAudio.play();
         if (p !== undefined) {
           p.catch(err => {
-            console.warn('[AudioManager] Chase play blocked, using synth:', err.message);
-            this.startSynthChase();
+            console.warn('[AudioManager] Chase play failed on first attempt, retrying:', err.message);
+            targetAudio.load();
+            targetAudio.play().catch(() => this.startSynthChase());
           });
         }
       } catch (e) {
         this.startSynthChase();
       }
     } else {
-      this.startSynthChase();
+      // For monsters without a loop (e.g. Aseel), keep clean without 3ooo sound
+      this.activeChaseAudio = null;
+      this.stopSynthChase();
     }
+  }
+
+  stopChaseLoopOnly() {
+    if (this.chaseAudioMap) {
+      for (const audio of Object.values(this.chaseAudioMap)) {
+        try {
+          audio.pause();
+          audio.currentTime = 0;
+        } catch (e) {}
+      }
+    }
+    this.activeChaseAudio = null;
+    this.stopSynthChase();
   }
 
   stopChase() {
     this.isPlayingChase = false;
     this.stopCurrentVoice();
-    if (this.chaseAudio) {
-      try {
-        this.chaseAudio.pause();
-        this.chaseAudio.currentTime = 0;
-      } catch (e) {}
-    }
-    this.stopSynthChase();
+    this.stopChaseLoopOnly();
   }
 
   // ─── Voice Clips (with 70% background ducking) ───
@@ -243,6 +307,22 @@ class AudioManager {
     }
   }
 
+  playMonsterVoice(monsterType) {
+    if (monsterType === 'kenan') {
+      const keys = ['voice_warak', 'voice_ray7', 'voice_jwal', 'voice_mafer', 'voice_jayak', 'voice_wagaf'];
+      this.playVoice(keys[Math.floor(Math.random() * keys.length)]);
+    } else if (monsterType === 'aseel') {
+      const keys = ['aseel_1', 'aseel_2', 'aseel_3'];
+      this.playVoice(keys[Math.floor(Math.random() * keys.length)]);
+    } else if (monsterType === 'elias') {
+      const keys = ['elias_1', 'elias_2', 'elias_3'];
+      this.playVoice(keys[Math.floor(Math.random() * keys.length)]);
+    } else if (monsterType === 'qamar') {
+      const keys = ['qamar_1', 'qamar_2', 'qamar_3'];
+      this.playVoice(keys[Math.floor(Math.random() * keys.length)]);
+    }
+  }
+
   stopCurrentVoice() {
     if (this.currentVoiceAudio) {
       try {
@@ -282,8 +362,8 @@ class AudioManager {
   // ─── Volume Control ───
   applyCurrentVolume() {
     const finalVolume = Math.max(0, Math.min(1, this.baseVolume * this.voiceDuckingMultiplier));
-    if (this.chaseAudio) {
-      try { this.chaseAudio.volume = finalVolume; } catch (e) {}
+    if (this.activeChaseAudio) {
+      try { this.activeChaseAudio.volume = finalVolume; } catch (e) {}
     }
     if (this.isUsingSynth && this.synthGain && this.audioContext) {
       try { this.synthGain.gain.setValueAtTime(finalVolume * 0.3, this.audioContext.currentTime); } catch (e) {}
@@ -298,8 +378,8 @@ class AudioManager {
     this.baseVolume = Math.max(0.1, 1.0 - normDist * 0.85);
     this.applyCurrentVolume();
 
-    if (this.chaseAudio) {
-      try { this.chaseAudio.playbackRate = isRage ? 1.25 : 1.0; } catch (e) {}
+    if (this.activeChaseAudio) {
+      try { this.activeChaseAudio.playbackRate = isRage ? 1.25 : 1.0; } catch (e) {}
     }
 
     if (this.isUsingSynth && this.synthGain && this.synthOscillator && this.audioContext) {

@@ -351,17 +351,13 @@
   <script src="./js/entities.js?v=2.5"></script>
   <script src="./js/game.js?v=2.5"></script>
 
-  <!-- PWA Service Worker Registration -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').then((reg) => {
-          console.log('[PWA] Service Worker registered:', reg.scope);
-        }).catch((err) => {
-          console.warn('[PWA] Service Worker registration failed:', err);
-        });
-      });
-    }
-  </script>
+  <!-- PWA Force Install Overlay -->
+  <div id="pwa-force-install-overlay" class="pwa-overlay">
+    <div class="pwa-modal">
+      <h2>🎮 مطلوب تثبيت التطبيق للمتابعة!</h2>
+      <p>للحصول على أفضل أداء وأصوات كاملة بدون تقطيع على جوالك، يرجى تثبيت التطبيق على جهازك أولاً.</p>
+      <button id="pwa-install-btn" class="pwa-btn">📥 تثبيت اللعبة الآن</button>
+    </div>
+  </div>
 </body>
 </html>
