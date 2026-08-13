@@ -725,7 +725,15 @@ class Game {
     const my = Math.min(Math.max(py + Math.sin(spawnAngle) * spawnDist, 200), this.arenaHeight - 200);
 
     const mType = stageData.monsterType || 'kenan';
-    if (mType === 'kenan') {
+    if (stageData.isGrandFinal || stageId === 21) {
+      // Stage 21: All 4 Bosses Spawn Together in 4 Corners!
+      this.kenan = new window.Entities.KenanMonster(300, 300, this.difficulty);
+      this.activeChaseMonsters = [
+        new window.Entities.ChaseMonster('aseel', this.arenaWidth - 300, 300, this.difficulty),
+        new window.Entities.ChaseMonster('elias', 300, this.arenaHeight - 300, this.difficulty),
+        new window.Entities.ChaseMonster('qamar', this.arenaWidth - 300, this.arenaHeight - 300, this.difficulty)
+      ];
+    } else if (mType === 'kenan') {
       this.kenan = new window.Entities.KenanMonster(mx, my, this.difficulty);
       this.kenan.speed *= speedMult;
       this.activeChaseMonsters = [];
@@ -948,7 +956,11 @@ class Game {
     document.getElementById('victory-stage-name').innerText = stageData ? stageData.name : `المرحلة ${this.currentStageId}`;
 
     const descEl = document.getElementById('victory-desc-text');
-    if (this.currentStageId === 10) {
+    if (this.currentStageId === 21) {
+      descEl.innerText = '🎉 🏆 مبروك! لقد استطعت الهروب وتختيم القصة بالكامل 100%! 🏆 🎉';
+      document.getElementById('next-stage-btn').innerText = '🗺️ قائمة المراحل';
+      localStorage.setItem('kenan_story_completed', 'true');
+    } else if (this.currentStageId === 10) {
       descEl.innerText = '🎉 👑 تهانينا الحارة! هدمت كنان العملاق وختمت قصة الوحش كنان بنجاح 100%! 🏆';
       document.getElementById('next-stage-btn').innerText = '🗺️ قائمة المراحل';
     } else {
@@ -971,13 +983,14 @@ class Game {
   }
 
   spawnPowerUp() {
-    const padding = 100;
+    const padding = 150;
     const x = padding + Math.random() * (this.arenaWidth - padding * 2);
     const y = padding + Math.random() * (this.arenaHeight - padding * 2);
     const r = Math.random();
-    let type = 'speed';
-    if (r < 0.35) type = 'freeze';
-    else if (r < 0.70) type = 'banana';
+    let type = 'shield';
+    if (r < 0.35) type = 'shield';
+    else if (r < 0.70) type = 'speed';
+    else type = 'freeze_bomb';
 
     this.powerUps.push(new window.Entities.PowerUp(x, y, type));
   }
@@ -1048,11 +1061,11 @@ class Game {
       }
     }
 
-    // Spawn PowerUps periodically
+    // Spawn PowerUps periodically (every 10-12s)
     this.powerUpSpawnTimer += dt;
     if (this.powerUpSpawnTimer >= this.nextPowerUpDelay) {
       this.powerUpSpawnTimer = 0;
-      this.nextPowerUpDelay = 12 + Math.random() * 8;
+      this.nextPowerUpDelay = 10 + Math.random() * 2;
       this.spawnPowerUp();
     }
 
@@ -1173,8 +1186,23 @@ class Game {
       if (this.player) {
         const dist = Math.hypot(this.player.x - m.x, this.player.y - m.y);
         if (dist < (this.player.radius + m.radius - 8)) {
-          this.gameOver();
-          return;
+          if (this.player.hasShield) {
+            this.player.hasShield = false;
+            this.player.shieldInvulnerableTimer = 1.5;
+            window.soundEffectsManager.playBossHitSound();
+            window.hapticsManager.triggerImpact();
+
+            for (let k = 0; k < 20; k++) {
+              this.particles.push(new window.Entities.Particle(
+                this.player.x, this.player.y,
+                (Math.random() - 0.5) * 300, (Math.random() - 0.5) * 300,
+                '#00f0ff', 9, 0.5
+              ));
+            }
+          } else if (this.player.shieldInvulnerableTimer <= 0) {
+            this.gameOver();
+            return;
+          }
         }
       }
     });
@@ -1219,8 +1247,23 @@ class Game {
 
     // Collisions: Player vs Kenan Real
     if (this.kenan && distToKenan < (this.player.radius + this.kenan.radius - 8)) {
-      this.gameOver();
-      return;
+      if (this.player.hasShield) {
+        this.player.hasShield = false;
+        this.player.shieldInvulnerableTimer = 1.5;
+        window.soundEffectsManager.playBossHitSound();
+        window.hapticsManager.triggerImpact();
+
+        for (let k = 0; k < 20; k++) {
+          this.particles.push(new window.Entities.Particle(
+            this.player.x, this.player.y,
+            (Math.random() - 0.5) * 300, (Math.random() - 0.5) * 300,
+            '#00f0ff', 9, 0.5
+          ));
+        }
+      } else if (this.player.shieldInvulnerableTimer <= 0) {
+        this.gameOver();
+        return;
+      }
     }
 
     // Collisions: Thrown Slippers vs Kenan
@@ -1373,23 +1416,53 @@ class Game {
     this.powerUps.forEach((pu, idx) => {
       const dist = Math.hypot(this.player.x - pu.x, this.player.y - pu.y);
       if (dist < (this.player.radius + pu.radius)) {
-        window.hapticsManager.triggerTac();
-        if (pu.type === 'speed') {
-          this.player.speedBoostTimer = 3.0;
-          this.activePowerUp = { type: 'speed', timer: 3.0, duration: 3.0 };
+        window.hapticsManager.triggerImpact();
+        window.soundEffectsManager.playBossHitSound();
+
+        if (pu.type === 'shield') {
+          this.player.hasShield = true;
+          this.activePowerUp = { type: 'shield', timer: 15.0, duration: 15.0 };
+          document.getElementById('powerup-icon').innerText = '🛡️';
+          document.getElementById('powerup-indicator').classList.remove('hidden');
+        } else if (pu.type === 'speed' || pu.type === 'boost') {
+          this.player.speedBoostTimer = 4.0;
+          this.activePowerUp = { type: 'speed', timer: 4.0, duration: 4.0 };
           document.getElementById('powerup-icon').innerText = '⚡';
-        } else if (pu.type === 'freeze') {
-          this.kenan.freeze(1.5);
-          this.activePowerUp = { type: 'freeze', timer: 1.5, duration: 1.5 };
+          document.getElementById('powerup-indicator').classList.remove('hidden');
+        } else if (pu.type === 'freeze' || pu.type === 'freeze_bomb') {
+          if (this.kenan) this.kenan.freeze(3.0);
+          this.activeChaseMonsters.forEach(m => m.freeze(3.0));
+
+          for (let k = 0; k < 25; k++) {
+            this.particles.push(new window.Entities.Particle(
+              pu.x, pu.y,
+              (Math.random() - 0.5) * 350, (Math.random() - 0.5) * 350,
+              '#00f0ff', 8, 0.6
+            ));
+          }
+
+          this.activePowerUp = { type: 'freeze', timer: 3.0, duration: 3.0 };
           document.getElementById('powerup-icon').innerText = '❄️';
+          document.getElementById('powerup-indicator').classList.remove('hidden');
         } else if (pu.type === 'banana') {
           this.player.bananaTraps++;
           document.getElementById('banana-count').innerText = this.player.bananaTraps;
         }
-        document.getElementById('powerup-indicator').classList.remove('hidden');
         this.powerUps.splice(idx, 1);
       }
     });
+
+    // Stage 21 60-Second Survival Objective Counter
+    if (this.gameMode === 'STORY' && this.currentStageId === 21) {
+      const remainingTime = Math.max(0, 60.0 - this.score);
+      const countBadge = document.getElementById('objective-count-badge');
+      if (countBadge) countBadge.innerText = `⏱️ ${Math.ceil(remainingTime)}s`;
+
+      if (remainingTime <= 0) {
+        this.completeStoryStage();
+        return;
+      }
+    }
 
     // Collisions: Player vs Clones
     this.clones.forEach(clone => {

@@ -38,6 +38,9 @@ const ASSET_PATHS = {
   aseel: './assets/aseel.png',
   elias: './assets/elias.png',
   qamar: './assets/qamar.png',
+  shield: './assets/item_shield.png',
+  boost: './assets/item_boost.png',
+  freeze_bomb: './assets/item_freeze_bomb.png',
   keycard: './assets/item_key.png',
   generator: './assets/item_switch.png',
   crystal: './assets/obstacle_crystal.png',
@@ -126,9 +129,11 @@ class Player {
     this.dashDuration = 0;
     this.dashMultiplier = 2.4;
 
-    // PowerUp multipliers
+    // PowerUp multipliers & Shield
     this.speedBoostTimer = 0;
     this.padSpeedBoostTimer = 0;
+    this.hasShield = false;
+    this.shieldInvulnerableTimer = 0;
 
     // Chase Mode Monster Debuff Timers
     this.slowTimer = 0;             // Aseel Wand (Slow 50%)
@@ -154,6 +159,7 @@ class Player {
     if (this.dashDuration > 0) this.dashDuration -= dt;
     if (this.speedBoostTimer > 0) this.speedBoostTimer -= dt;
     if (this.padSpeedBoostTimer > 0) this.padSpeedBoostTimer -= dt;
+    if (this.shieldInvulnerableTimer > 0) this.shieldInvulnerableTimer -= dt;
 
     if (this.slowTimer > 0) this.slowTimer -= dt;
     if (this.freezeJoystickTimer > 0) this.freezeJoystickTimer -= dt;
@@ -226,22 +232,38 @@ class Player {
     // Dashing or Speed Trail
     if (this.dashDuration > 0 || this.speedBoostTimer > 0 || this.padSpeedBoostTimer > 0) {
       ctx.beginPath();
-      ctx.arc(0, 0, this.radius + 10, 0, Math.PI * 2);
-      ctx.fillStyle = this.dashDuration > 0 ? 'rgba(0, 240, 255, 0.4)' : 'rgba(0, 255, 136, 0.3)';
+      ctx.arc(0, 0, this.radius + 12, 0, Math.PI * 2);
+      ctx.fillStyle = this.dashDuration > 0 ? 'rgba(0, 240, 255, 0.4)' : 'rgba(0, 255, 136, 0.35)';
       ctx.fill();
 
       // Emit trail particles
-      if (Math.random() < 0.6) {
+      if (Math.random() < 0.7) {
         particles.push(new Particle(
-          this.x + (Math.random() - 0.5) * 12,
-          this.y + (Math.random() - 0.5) * 12,
-          -this.vx * 0.3,
-          -this.vy * 0.3,
+          this.x + (Math.random() - 0.5) * 14,
+          this.y + (Math.random() - 0.5) * 14,
+          -this.vx * 0.35,
+          -this.vy * 0.35,
           this.dashDuration > 0 ? '#00f0ff' : '#00ff88',
-          5,
-          0.35
+          6,
+          0.38
         ));
       }
+    }
+
+    // Shield Glowing Aura Ring
+    if (this.hasShield) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius + 14, 0, Math.PI * 2);
+      ctx.strokeStyle = '#00f0ff';
+      ctx.lineWidth = 4.5;
+      ctx.shadowColor = '#00f0ff';
+      ctx.shadowBlur = 22;
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(0, 240, 255, 0.18)';
+      ctx.fill();
+      ctx.restore();
     }
 
     ctx.rotate(this.angle);
@@ -856,27 +878,43 @@ class PowerUp {
 
     let color = '#00ff88';
     let icon = '⚡';
+    let imgKey = this.type;
 
-    if (this.type === 'freeze') {
+    if (this.type === 'shield') {
+      color = '#00f0ff';
+      icon = '🛡️';
+    } else if (this.type === 'freeze' || this.type === 'freeze_bomb') {
       color = '#00f0ff';
       icon = '❄️';
+      imgKey = 'freeze_bomb';
+    } else if (this.type === 'speed' || this.type === 'boost') {
+      color = '#00ff88';
+      icon = '⚡';
+      imgKey = 'boost';
     } else if (this.type === 'banana') {
       color = '#ffcc00';
       icon = '🍌';
     }
 
     ctx.shadowColor = color;
-    ctx.shadowBlur = 15;
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.shadowBlur = 18;
 
-    ctx.shadowBlur = 0;
-    ctx.font = '18px Cairo, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(icon, 0, 0);
+    const pImg = ASSET_IMAGES[imgKey];
+    if (pImg && pImg.complete && pImg.naturalWidth > 0) {
+      const pSize = this.radius * 2.5;
+      ctx.drawImage(pImg, -pSize / 2, -pSize / 2, pSize, pSize);
+    } else {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.shadowBlur = 0;
+      ctx.font = '18px Cairo, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(icon, 0, 0);
+    }
 
     ctx.restore();
   }
@@ -1231,7 +1269,25 @@ const STORY_STAGES = [
     itemType: "slipper",
     icon: "👡",
     itemLabel: "الزنوبة الطائرة",
-    desc: "معركة القمة الأخيرة في اللعبة! اهزم الملكة قمر واختم طور القصة بنجاح ساحق! 🏆"
+    desc: "معركة القمة الأخيرة في اللعبة! اهزم الملكة قمر لتصل إلى المرحلة الكبرى 21! 🏆"
+  },
+  {
+    id: 21,
+    chapter: 4,
+    chapterName: "المرحلة النهائية: المواجهة الكبرى 🏆",
+    monsterType: "all_bosses",
+    monsterName: "الوحوش الأربعة معاً",
+    name: "المرحلة 21: المواجهة الكبرى",
+    themeColor: "#ff0044",
+    isGrandFinal: true,
+    hasSlippers: true,
+    surviveTimeLimit: 60.0,
+    objectiveText: "🏆 المرحلة 21: اصمد لمدة 60 ثانية ضد الوحوش الأربعة معاً واختم القصة!",
+    itemsNeeded: 0,
+    itemType: "none",
+    icon: "🏆",
+    itemLabel: "المواجهة الكبرى",
+    desc: "المرحلة النهائية الكبرى! اصمد لمدة 60 ثانية ضد كنان، أسيل، إلياس، وقمر معاً لتختم اللعبة بالكامل! 🏆"
   }
 ];
 
@@ -1596,6 +1652,11 @@ class ChaseMonster {
     this.memeTimer = Math.random() * 3.0;
     this.memeInterval = 4.0;
     this.currentQuote = this.quotes[0] || "";
+    this.freezeTimer = 0;
+  }
+
+  freeze(duration = 3.0) {
+    this.freezeTimer = duration;
   }
 
   configureMonster() {
@@ -1638,6 +1699,11 @@ class ChaseMonster {
   }
 
   update(dt, playerX, playerY, arenaWidth, arenaHeight, obstacles, doors, particles) {
+    if (this.freezeTimer > 0) {
+      this.freezeTimer -= dt;
+      return;
+    }
+
     this.memeTimer += dt;
     if (this.memeTimer >= this.memeInterval) {
       this.memeTimer = 0;
