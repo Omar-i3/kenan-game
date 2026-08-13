@@ -14,8 +14,9 @@ class Game {
     this.difficulty = 'normal';
 
     // Story Mode State
+    const savedStage = localStorage.getItem('kenan_unlocked_stage') || localStorage.getItem('kenan_unlocked_level') || '1';
+    this.unlockedStage = parseInt(savedStage, 10);
     this.currentStageId = 1;
-    this.unlockedStage = parseInt(localStorage.getItem('kenan_unlocked_stage') || '1', 10);
     this.storyItems = [];
     this.collectibleSlippers = [];
     this.pushableCrates = [];
@@ -333,10 +334,10 @@ class Game {
 
     bindBtn('next-stage-btn', () => {
       document.getElementById('victory-screen').classList.add('hidden');
-      if (this.currentStageId < 10) {
+      if (this.currentStageId < 20) {
         this.startStoryStage(this.currentStageId + 1);
       } else {
-        this.openStageSelectScreen();
+        this.openStageSelectScreen('1');
       }
       window.hapticsManager.triggerTac();
     });
@@ -398,7 +399,7 @@ class Game {
     document.getElementById('chase-mode-screen').classList.remove('hidden');
   }
 
-  openStageSelectScreen() {
+  openStageSelectScreen(filterChapter = '1') {
     this.state = 'STAGE_SELECT';
     document.getElementById('start-screen').classList.add('hidden');
     document.getElementById('chase-mode-screen').classList.add('hidden');
@@ -406,39 +407,76 @@ class Game {
     document.getElementById('game-over-screen').classList.add('hidden');
     document.getElementById('hud-layer').classList.add('hidden');
 
+    const tabs = document.querySelectorAll('.chapter-tab');
+    tabs.forEach(tab => {
+      let tabLast = 0;
+      const onTab = (e) => {
+        const now = Date.now();
+        if (now - tabLast < 200) return;
+        tabLast = now;
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        this.renderStageCards(tab.dataset.chapter);
+        window.hapticsManager.triggerTac();
+      };
+      tab.onpointerdown = onTab;
+      tab.onclick = onTab;
+    });
+
+    this.renderStageCards(filterChapter);
+    document.getElementById('stage-select-screen').classList.remove('hidden');
+  }
+
+  renderStageCards(filterChapter = '1') {
     const grid = document.getElementById('stage-cards-grid');
+    if (!grid) return;
     grid.innerHTML = '';
 
     const stages = window.Entities.STORY_STAGES;
-    stages.forEach(stg => {
-      const card = document.createElement('div');
-      const isUnlocked = stg.id <= this.unlockedStage;
+    const chapters = [
+      { id: 1, name: '👹 الفصل 1: غضب كنان (المراحل 1 - 5)' },
+      { id: 2, name: '🪄 الفصل 2: سحر أسيل (المراحل 6 - 10)' },
+      { id: 3, name: '🎮 الفصل 3: تحدي إلياس (المراحل 11 - 15)' },
+      { id: 4, name: '👑 الفصل 4: مملكة قمر (المراحل 16 - 20)' }
+    ];
 
-      card.className = `stage-card ${isUnlocked ? 'unlocked' : 'locked'} ${stg.isBossFight ? 'boss-card' : ''}`;
-      
-      card.innerHTML = `
-        <div class="stage-num">${stg.isBossFight ? '👹 BOSS' : `المرحلة ${stg.id}`}</div>
-        <div class="stage-title">${stg.name.split(':')[1] || stg.name}</div>
-        <div class="stage-icon">${isUnlocked ? stg.icon : '🔒'}</div>
-      `;
+    chapters.forEach(ch => {
+      if (filterChapter !== 'all' && String(ch.id) !== String(filterChapter)) return;
 
-      if (isUnlocked) {
-        let cardLastTime = 0;
-        const playStage = (e) => {
-          const now = Date.now();
-          if (now - cardLastTime < 300) return;
-          cardLastTime = now;
-          window.audioManager.unlockAudio();
-          this.startStoryStage(stg.id);
-        };
-        card.onpointerdown = playStage;
-        card.onclick = playStage;
-      }
+      const header = document.createElement('div');
+      header.className = 'chapter-header-badge';
+      header.innerText = ch.name;
+      grid.appendChild(header);
 
-      grid.appendChild(card);
+      const chStages = stages.filter(s => s.chapter === ch.id);
+      chStages.forEach(stg => {
+        const card = document.createElement('div');
+        const isUnlocked = stg.id <= this.unlockedStage;
+
+        card.className = `stage-card ${isUnlocked ? 'unlocked' : 'locked'} ${stg.isBossFight ? 'boss-card' : ''}`;
+        
+        card.innerHTML = `
+          <div class="stage-num">${stg.isBossFight ? '👹 BOSS' : `المرحلة ${stg.id}`}</div>
+          <div class="stage-title">${stg.name.split(':')[1] || stg.name}</div>
+          <div class="stage-icon">${isUnlocked ? stg.icon : '🔒'}</div>
+        `;
+
+        if (isUnlocked) {
+          let cardLastTime = 0;
+          const playStage = (e) => {
+            const now = Date.now();
+            if (now - cardLastTime < 300) return;
+            cardLastTime = now;
+            window.audioManager.unlockAudio();
+            this.startStoryStage(stg.id);
+          };
+          card.onpointerdown = playStage;
+          card.onclick = playStage;
+        }
+
+        grid.appendChild(card);
+      });
     });
-
-    document.getElementById('stage-select-screen').classList.remove('hidden');
   }
 
   dropBananaTrap() {
@@ -674,7 +712,36 @@ class Game {
     this.isNightMode = !!stageData.isNightMode;
     this.weatherRain = !!stageData.weatherRain;
 
-    if (stageData.permanentRage) {
+    // Chapter Level Speed Formula: Speed = BaseSpeed * (1 + (levelInChapter * 0.12))
+    const levelInChapter = (stageId - 1) % 5;
+    const speedMult = 1 + (levelInChapter * 0.12);
+
+    // Spawn Pursuer based on Monster Type (Kenan, Aseel, Elias, Qamar)
+    const px = this.player ? this.player.x : this.arenaWidth / 2;
+    const py = this.player ? this.player.y : this.arenaHeight / 2;
+    const spawnAngle = Math.random() * Math.PI * 2;
+    const spawnDist = 550;
+    const mx = Math.min(Math.max(px + Math.cos(spawnAngle) * spawnDist, 200), this.arenaWidth - 200);
+    const my = Math.min(Math.max(py + Math.sin(spawnAngle) * spawnDist, 200), this.arenaHeight - 200);
+
+    const mType = stageData.monsterType || 'kenan';
+    if (mType === 'kenan') {
+      this.kenan = new window.Entities.KenanMonster(mx, my, this.difficulty);
+      this.kenan.speed *= speedMult;
+      this.activeChaseMonsters = [];
+    } else {
+      this.kenan = null;
+      const monster = new window.Entities.ChaseMonster(mType, mx, my, this.difficulty);
+      monster.baseSpeed *= speedMult;
+      if (stageData.isBossFight) {
+        monster.isBoss = true;
+        monster.bossHp = stageData.bossHp || 50;
+        monster.maxBossHp = stageData.bossHp || 50;
+      }
+      this.activeChaseMonsters = [monster];
+    }
+
+    if (stageData.permanentRage && this.kenan) {
       this.rageTriggered = true;
       this.kenan.setRageMode(true);
     }
@@ -684,7 +751,6 @@ class Game {
       this.clones.push(new window.Entities.KenanClone(this.arenaWidth * 0.7, this.arenaHeight * 0.7));
     }
 
-    // Stage 6 Basement Pushable Crates
     if (stageData.pushableCrates) {
       this.pushableCrates = [
         new window.Entities.PushableCrate(this.arenaWidth * 0.40, this.arenaHeight * 0.40),
@@ -713,8 +779,8 @@ class Game {
       }
     }
 
-    // Spawn Ground Collectible Slippers (Stages 6 to 10)
-    if (stageData.hasSlippers || stageId >= 6) {
+    // Spawn Ground Collectible Slippers
+    if (stageData.hasSlippers || stageId >= 5) {
       const count = stageData.isBossFight ? 5 : 2;
       for (let i = 0; i < count; i++) {
         this.collectibleSlippers.push(new window.Entities.CollectibleSlipper(
@@ -724,9 +790,9 @@ class Game {
       }
     }
 
-    // Stage 10 Giant Kenan Boss Fight!
+    // Stage Boss Fight Setup
     if (stageData.isBossFight) {
-      this.kenan.setAsBoss(100);
+      if (this.kenan) this.kenan.setAsBoss(stageData.bossHp || 50);
       document.getElementById('boss-health-container').classList.remove('hidden');
       this.updateBossHpBar();
     }
@@ -753,11 +819,20 @@ class Game {
   }
 
   updateBossHpBar() {
-    if (!this.kenan || !this.kenan.isBoss) return;
-    const hp = Math.max(0, this.kenan.bossHp);
-    const pct = (hp / this.kenan.maxBossHp) * 100;
+    let hp = 0;
+    let maxHp = 100;
+    if (this.kenan && this.kenan.isBoss) {
+      hp = Math.max(0, this.kenan.bossHp);
+      maxHp = this.kenan.maxBossHp;
+    } else if (this.activeChaseMonsters.length > 0 && this.activeChaseMonsters[0].isBoss) {
+      const m = this.activeChaseMonsters[0];
+      hp = Math.max(0, m.bossHp);
+      maxHp = m.maxBossHp;
+    } else return;
+
+    const pct = (hp / maxHp) * 100;
     document.getElementById('boss-health-bar-fill').style.width = `${pct}%`;
-    document.getElementById('boss-hp-text').innerText = `${hp} / ${this.kenan.maxBossHp} HP`;
+    document.getElementById('boss-hp-text').innerText = `${hp} / ${maxHp} HP`;
   }
 
   pauseGame() {
@@ -863,9 +938,10 @@ class Game {
     window.soundEffectsManager.playBossDeadSound();
     window.hapticsManager.triggerImpact();
 
-    if (this.currentStageId >= this.unlockedStage && this.unlockedStage < 10) {
+    if (this.currentStageId >= this.unlockedStage && this.unlockedStage < 20) {
       this.unlockedStage = this.currentStageId + 1;
       localStorage.setItem('kenan_unlocked_stage', this.unlockedStage.toString());
+      localStorage.setItem('kenan_unlocked_level', this.unlockedStage.toString());
     }
 
     const stageData = window.Entities.STORY_STAGES.find(s => s.id === this.currentStageId);
@@ -1148,38 +1224,69 @@ class Game {
     }
 
     // Collisions: Thrown Slippers vs Kenan
-    for (let i = this.slippers.length - 1; i >= 0; i--) {
-      const slp = this.slippers[i];
-      const dist = Math.hypot(this.kenan.x - slp.x, this.kenan.y - slp.y);
-      if (dist < (this.kenan.radius + slp.radius)) {
-        this.slippers.splice(i, 1);
-        
-        // Spawn Hit Sparks
-        for (let k = 0; k < 12; k++) {
-          this.particles.push(new window.Entities.Particle(
-            this.kenan.x, this.kenan.y,
-            (Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200,
-            '#ffcc00', 7, 0.4
-          ));
-        }
-
-        window.soundEffectsManager.playBossHitSound();
-        window.hapticsManager.triggerImpact();
-
-        if (this.kenan.isBoss) {
-          this.kenan.bossHp -= 10;
-          this.updateBossHpBar();
-          this.kenan.freeze(0.8);
-          if (this.kenan.bossHp <= 0) {
-            this.completeStoryStage();
-            return;
+    if (this.kenan) {
+      for (let i = this.slippers.length - 1; i >= 0; i--) {
+        const slp = this.slippers[i];
+        const dist = Math.hypot(this.kenan.x - slp.x, this.kenan.y - slp.y);
+        if (dist < (this.kenan.radius + slp.radius)) {
+          this.slippers.splice(i, 1);
+          
+          for (let k = 0; k < 12; k++) {
+            this.particles.push(new window.Entities.Particle(
+              this.kenan.x, this.kenan.y,
+              (Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200,
+              '#ffcc00', 7, 0.4
+            ));
           }
-        } else {
-          // Stun & Freeze Normal Kenan for 1.5s
-          this.kenan.freeze(1.5);
+
+          window.soundEffectsManager.playBossHitSound();
+          window.hapticsManager.triggerImpact();
+
+          if (this.kenan.isBoss) {
+            this.kenan.bossHp -= 10;
+            this.updateBossHpBar();
+            this.kenan.freeze(0.8);
+            if (this.kenan.bossHp <= 0) {
+              this.completeStoryStage();
+              return;
+            }
+          } else {
+            this.kenan.freeze(1.5);
+          }
         }
       }
     }
+
+    // Collisions: Thrown Slippers vs ChaseMonsters (Aseel, Elias, Qamar Boss Fights)
+    this.activeChaseMonsters.forEach(monster => {
+      for (let i = this.slippers.length - 1; i >= 0; i--) {
+        const slp = this.slippers[i];
+        const dist = Math.hypot(monster.x - slp.x, monster.y - slp.y);
+        if (dist < (monster.radius + slp.radius)) {
+          this.slippers.splice(i, 1);
+
+          for (let k = 0; k < 12; k++) {
+            this.particles.push(new window.Entities.Particle(
+              monster.x, monster.y,
+              (Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200,
+              monster.themeColor || '#ff00aa', 7, 0.4
+            ));
+          }
+
+          window.soundEffectsManager.playBossHitSound();
+          window.hapticsManager.triggerImpact();
+
+          if (monster.isBoss) {
+            monster.bossHp -= 10;
+            this.updateBossHpBar();
+            if (monster.bossHp <= 0) {
+              this.completeStoryStage();
+              return;
+            }
+          }
+        }
+      }
+    });
 
     // Collisions: Player vs Ground Collectible Slippers
     this.collectibleSlippers.forEach(slp => {

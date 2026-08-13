@@ -249,14 +249,23 @@
     <!-- Stage Select Screen Modal Overlay -->
     <div id="stage-select-screen" class="screen-overlay hidden">
       <div class="glass-panel story-stages-panel">
-        <h2 class="game-title" style="font-size: 1.8rem; color: var(--accent-cyan);">📖 طور القصة - اختيار المراحل</h2>
-        <p class="game-subtitle" style="margin-bottom: 10px;">أكمل المهمة في كل مرحلة لفتح المرحلة التالية!</p>
+        <h2 class="game-title" style="font-size: 1.6rem; color: var(--accent-cyan);">📖 طور القصة: رحلة الهروب (20 مرحلة)</h2>
+        <p class="game-subtitle" style="margin-bottom: 6px;">واجه الوحوش الـ 4 وافتح الفصول لتختم القصة 100%!</p>
 
-        <div id="stage-cards-grid" class="stage-cards-grid">
-          <!-- Dynamically populated 10 Stage Cards -->
+        <!-- Chapter Filter Tabs -->
+        <div class="chapter-tabs-bar">
+          <button class="chapter-tab active" data-chapter="1">👹 كنان (1-5)</button>
+          <button class="chapter-tab" data-chapter="2">🪄 أسيل (6-10)</button>
+          <button class="chapter-tab" data-chapter="3">🎮 إلياس (11-15)</button>
+          <button class="chapter-tab" data-chapter="4">👑 قمر (16-20)</button>
+          <button class="chapter-tab" data-chapter="all">🌟 الكل (1-20)</button>
         </div>
 
-        <button id="close-stages-btn" class="btn-secondary" style="margin-top: 12px;">🔙 العودة للقائمة الرئيسية</button>
+        <div id="stage-cards-grid" class="stage-cards-grid">
+          <!-- Dynamically populated 20 Stage Cards -->
+        </div>
+
+        <button id="close-stages-btn" class="btn-secondary" style="margin-top: 8px;">🔙 العودة للقائمة الرئيسية</button>
       </div>
     </div>
 

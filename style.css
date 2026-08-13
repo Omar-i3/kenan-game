@@ -278,7 +278,48 @@ button * {
 
 /* Stage Cards Grid Modal */
 .story-stages-panel {
-  max-width: 650px;
+  max-width: 680px;
+}
+
+/* Chapter Tabs in Story Mode */
+.chapter-tabs-bar {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.chapter-tab {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #ddd;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chapter-tab.active {
+  background: var(--accent-cyan);
+  color: #000;
+  border-color: #fff;
+  box-shadow: 0 0 10px var(--accent-cyan);
+}
+
+.chapter-header-badge {
+  grid-column: 1 / -1;
+  background: linear-gradient(90deg, rgba(0,240,255,0.2) 0%, rgba(255,0,100,0.2) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 0.82rem;
+  font-weight: 900;
+  color: var(--secondary-color);
+  text-align: right;
+  margin-top: 6px;
 }
 
 .stage-cards-grid {

@@ -13,11 +13,12 @@ playerImg.src = './assets/player.png';
 let isPlayerImgLoaded = false;
 playerImg.onload = () => { isPlayerImgLoaded = true; };
 
-// Preload Stage Background Images (Level/bg_stage1.png to bg_stage10.png)
+// Preload Stage Background Images (Level/bg_stage1.png to bg_stage10.png mapped across 20 stages)
 const STAGE_BG_IMAGES = {};
-for (let i = 1; i <= 10; i++) {
+for (let i = 1; i <= 20; i++) {
   const img = new Image();
-  img.src = `./Level/bg_stage${i}.png`;
+  const bgNum = ((i - 1) % 10) + 1;
+  img.src = `./Level/bg_stage${bgNum}.png`;
   STAGE_BG_IMAGES[i] = img;
 }
 
@@ -882,11 +883,20 @@ class PowerUp {
 }
 
 /**
- * Story Mode Stages Data
+ * Story Mode Stages Data (20 Stages across 4 Chapters)
+ * Chapter 1 (1-5): Kenan 👹
+ * Chapter 2 (6-10): Aseel 🪄
+ * Chapter 3 (11-15): Elias 🎮
+ * Chapter 4 (16-20): Qamar 👑
  */
 const STORY_STAGES = [
+  // ─── الفصل 1: غضب كنان (المراحل 1 - 5) ───
   {
     id: 1,
+    chapter: 1,
+    chapterName: "الفصل 1: غضب كنان",
+    monsterType: "kenan",
+    monsterName: "كنان",
     name: "المرحلة 1: الصالة",
     themeColor: "#ff9900",
     objectiveText: "🎯 المهمة: اجمع المفتاح (🔑) واهرب إلى بوابة الخروج (🚪)!",
@@ -898,18 +908,26 @@ const STORY_STAGES = [
   },
   {
     id: 2,
+    chapter: 1,
+    chapterName: "الفصل 1: غضب كنان",
+    monsterType: "kenan",
+    monsterName: "كنان",
     name: "المرحلة 2: المطبخ",
     themeColor: "#ffaa00",
     slipperyFloor: true,
-    objectiveText: "🎯 المهمة: اجمع 3 علب عصير (🧃) واهرب إلى بوابة الخروج (🚪)!",
-    itemsNeeded: 3,
+    objectiveText: "🎯 المهمة: اجمع 2 علب عصير (🧃) واهرب إلى بوابة الخروج (🚪)!",
+    itemsNeeded: 2,
     itemType: "juice",
     icon: "🧃",
     itemLabel: "علب عصير",
-    desc: "الأرضية مبللة وتزلق! اجمع 3 علب عصير لتفتح بوابة الخروج."
+    desc: "الأرضية مبللة وتزلق! اجمع علب العصير لتفتح بوابة الخروج."
   },
   {
     id: 3,
+    chapter: 1,
+    chapterName: "الفصل 1: غضب كنان",
+    monsterType: "kenan",
+    monsterName: "كنان",
     name: "المرحلة 3: غرفة النوم",
     themeColor: "#9900ff",
     isNightMode: true,
@@ -922,6 +940,10 @@ const STORY_STAGES = [
   },
   {
     id: 4,
+    chapter: 1,
+    chapterName: "الفصل 1: غضب كنان",
+    monsterType: "kenan",
+    monsterName: "كنان",
     name: "المرحلة 4: الممر",
     themeColor: "#00ccff",
     hasCorridorDoors: true,
@@ -934,80 +956,282 @@ const STORY_STAGES = [
   },
   {
     id: 5,
-    name: "المرحلة 5: الحوش",
-    themeColor: "#00ff88",
-    hasSpeedPads: true,
-    objectiveText: "🎯 المهمة: قف على 3 رشاشات ماء (💦) واهرب عبر بوابة الحوش (🚪)!",
-    itemsNeeded: 3,
-    itemType: "sprinkler",
-    icon: "💦",
-    itemLabel: "رشاشات الماء",
-    desc: "استغل سجادات السرعة واقف على رشاشات الماء واهرب عبر البوابة."
-  },
-  {
-    id: 6,
-    name: "المرحلة 6: القبو",
-    themeColor: "#885522",
-    pushableCrates: true,
-    hasSlippers: true,
-    objectiveText: "🎯 المهمة: ادفع الصناديق (📦)، اجمع المولد (🔋) والزنوبة 👡 واهرب عبر البوابة!",
-    itemsNeeded: 1,
-    itemType: "generator",
-    icon: "🔋",
-    itemLabel: "بطارية المولد",
-    desc: "ادفع الصناديق، اجمع الزنوبة لضرب كنان واهرب عبر بوابة القبو."
-  },
-  {
-    id: 7,
-    name: "المرحلة 7: السطح",
-    themeColor: "#5588ff",
-    weatherRain: true,
-    hasSlippers: true,
-    objectiveText: "🎯 المهمة: اجمع سلكين (🔌) والزنوبة 👡 واهرب عبر المصعد (🚪)!",
-    itemsNeeded: 2,
-    itemType: "wire",
-    icon: "🔌",
-    itemLabel: "أسلاك الكهرباء",
-    desc: "أجواء ممطرة وضبابية! اجمع الأسلاك والزنوبة واهرب عبر المصعد."
-  },
-  {
-    id: 8,
-    name: "المرحلة 8: المجلس",
+    chapter: 1,
+    chapterName: "الفصل 1: غضب كنان",
+    monsterType: "kenan",
+    monsterName: "كنان",
+    name: "المرحلة 5: قتال بوس كنان",
     themeColor: "#ff0044",
-    permanentRage: true,
-    hasSlippers: true,
-    objectiveText: "🎯 المهمة: اجمع 4 قطع حلوى (🍬) والزنوبة 👡 واهرب عبر البوابة!",
-    itemsNeeded: 4,
-    itemType: "candy",
-    icon: "🍬",
-    itemLabel: "قطع الحلوى",
-    desc: "كنان معصب جداً بوضع الغضب! اجمع الحلوى والزنوبة واهرب بسرعة."
-  },
-  {
-    id: 9,
-    name: "المرحلة 9: عالم الميمز",
-    themeColor: "#aa00ff",
-    hasClones: true,
-    objectiveText: "🎯 المهمة: دمر 3 بلورات ميمز (🔮) والزنوبة 👡 واهرب عبر البوابة!",
-    itemsNeeded: 3,
-    itemType: "crystal",
-    icon: "🔮",
-    itemLabel: "بلورات الميمز",
-    desc: "عالم الميمز المليء بالنسخ! دمر البلورات واجمع الزنوبة واهرب."
-  },
-  {
-    id: 10,
-    name: "المرحلة 10: قتال البوس الأخير",
-    themeColor: "#ff0000",
     isBossFight: true,
     hasSlippers: true,
-    bossHp: 100,
-    objectiveText: "⚔️ قتال البوس: اجمع الزنوبات وارميها (👡) على كنان العملاق ودمّره!",
+    bossHp: 50,
+    objectiveText: "⚔️ بوس الفصل 1: اجمع الزنوبات وارميها (👡) على كنان العملاق وهزمه!",
     itemsNeeded: 0,
     itemType: "slipper",
     icon: "👡",
     itemLabel: "الزنوبة الطائرة",
-    desc: "المواجهة الحاسمة! اجمع الزنوبات وارميهم على كنان العملاق حتى تقتله!"
+    desc: "المواجهة الحاسمة مع كنان العملاق! ارمِ الزنوبات عليه وهزمه لتفتح الفصل الثاني!"
+  },
+
+  // ─── الفصل 2: سحر أسيل (المراحل 6 - 10) ───
+  {
+    id: 6,
+    chapter: 2,
+    chapterName: "الفصل 2: سحر أسيل",
+    monsterType: "aseel",
+    monsterName: "أسيل",
+    name: "المرحلة 6: حديقة أسيل",
+    themeColor: "#aa00ff",
+    hasSlippers: true,
+    objectiveText: "🎯 المهمة: اجمع 3 بلورات سحرية (🔮) واحذر عصا أسيل 🪄 ثم اهرب!",
+    itemsNeeded: 3,
+    itemType: "crystal",
+    icon: "🔮",
+    itemLabel: "البلورات السحرية",
+    desc: "احذر من عصا أسيل السحرية التي تبطئ حركتك! اجمع البلورات واهرب."
+  },
+  {
+    id: 7,
+    chapter: 2,
+    chapterName: "الفصل 2: سحر أسيل",
+    monsterType: "aseel",
+    monsterName: "أسيل",
+    name: "المرحلة 7: القبو السري",
+    themeColor: "#885522",
+    pushableCrates: true,
+    hasSlippers: true,
+    objectiveText: "🎯 المهمة: ادفع الصناديق (📦)، اجمع المولد (🔋) واهرب عبر البوابة!",
+    itemsNeeded: 1,
+    itemType: "generator",
+    icon: "🔋",
+    itemLabel: "بطارية المولد",
+    desc: "ادفع الصناديق الخشبية وابتعد عن سحر أسيل واهرب عبر Portal القبو."
+  },
+  {
+    id: 8,
+    chapter: 2,
+    chapterName: "الفصل 2: سحر أسيل",
+    monsterType: "aseel",
+    monsterName: "أسيل",
+    name: "المرحلة 8: السطح الممطر",
+    themeColor: "#5588ff",
+    weatherRain: true,
+    hasSlippers: true,
+    objectiveText: "🎯 المهمة: اجمع سلكين (🔌) واهرب عبر مصعد السطح (🚪)!",
+    itemsNeeded: 2,
+    itemType: "wire",
+    icon: "🔌",
+    itemLabel: "أسلاك الكهرباء",
+    desc: "أجواء ممطرة وضبابية على السطح! اجمع الأسلاك واهرب عبر المصعد."
+  },
+  {
+    id: 9,
+    chapter: 2,
+    chapterName: "الفصل 2: سحر أسيل",
+    monsterType: "aseel",
+    monsterName: "أسيل",
+    name: "المرحلة 9: عالم السحر",
+    themeColor: "#cc00ff",
+    hasClones: true,
+    hasSlippers: true,
+    objectiveText: "🎯 المهمة: اجمع 3 قطع حلوى سحرية (🍬) واهرب عبر بوابة السحر!",
+    itemsNeeded: 3,
+    itemType: "candy",
+    icon: "🍬",
+    itemLabel: "الحلوى السحرية",
+    desc: "عالم مليء بالأوهام والنسخ! اجمع الحلوى السحرية واهرب فوراً."
+  },
+  {
+    id: 10,
+    chapter: 2,
+    chapterName: "الفصل 2: سحر أسيل",
+    monsterType: "aseel",
+    monsterName: "أسيل",
+    name: "المرحلة 10: قتال بوس أسيل",
+    themeColor: "#aa00ff",
+    isBossFight: true,
+    hasSlippers: true,
+    bossHp: 50,
+    objectiveText: "⚔️ بوس الفصل 2: ارمِ الزنوبات (👡) على الساحرة أسيل وهزمها!",
+    itemsNeeded: 0,
+    itemType: "slipper",
+    icon: "👡",
+    itemLabel: "الزنوبة الطائرة",
+    desc: "قتال البوس ضد أسيل! استغل الزنوبات لمنع سحر التبطيء وهزيمتها لفتح الفصل الثالث!"
+  },
+
+  // ─── الفصل 3: تحدي إلياس (المراحل 11 - 15) ───
+  {
+    id: 11,
+    chapter: 3,
+    chapterName: "الفصل 3: تحدي إلياس",
+    monsterType: "elias",
+    monsterName: "إلياس",
+    name: "المرحلة 11: غرفة الألعاب",
+    themeColor: "#00f0ff",
+    hasSlippers: true,
+    objectiveText: "🎯 المهمة: اجمع 3 أجهزة كنترولر (🎮) واحذر تجميد إلياس ثم اهرب!",
+    itemsNeeded: 3,
+    itemType: "wand",
+    icon: "🎮",
+    itemLabel: "أجهزة الكنترولر",
+    desc: "احذر من كنترولر إلياس الذي يجمد حركة الجويستيك! اجمع الأجهزة واهرب."
+  },
+  {
+    id: 12,
+    chapter: 3,
+    chapterName: "الفصل 3: تحدي إلياس",
+    monsterType: "elias",
+    monsterName: "إلياس",
+    name: "المرحلة 12: المختبر الرقمي",
+    themeColor: "#00aaff",
+    hasSpeedPads: true,
+    hasSlippers: true,
+    objectiveText: "🎯 المهمة: اجمع 2 بطاقات رقمية (💳) واستغل سجادات السرعة للهروب!",
+    itemsNeeded: 2,
+    itemType: "keycard",
+    icon: "💳",
+    itemLabel: "البطاقات الرقمية",
+    desc: "استغل سجادات السرعة لتجاوز تجميد إلياس واجمع البطاقات لتفتح البوابة."
+  },
+  {
+    id: 13,
+    chapter: 3,
+    chapterName: "الفصل 3: تحدي إلياس",
+    monsterType: "elias",
+    monsterName: "إلياس",
+    name: "المرحلة 13: ممر التكنولوجيا",
+    themeColor: "#0088cc",
+    hasCorridorDoors: true,
+    hasSlippers: true,
+    objectiveText: "🎯 المهمة: شغل 3 مفاتيح طاقة (🔘) واستخدم الأبواب لإعاقة إلياس!",
+    itemsNeeded: 3,
+    itemType: "switch",
+    icon: "🔘",
+    itemLabel: "مفاتيح الطاقة",
+    desc: "استخدم الأبواب التفاعلية لإغلاق الطرق أمام إلياس واجمع المفاتيح."
+  },
+  {
+    id: 14,
+    chapter: 3,
+    chapterName: "الفصل 3: تحدي إلياس",
+    monsterType: "elias",
+    monsterName: "إلياس",
+    name: "المرحلة 14: غرفة السيرفرات",
+    themeColor: "#0055aa",
+    isNightMode: true,
+    hasSlippers: true,
+    objectiveText: "🎯 المهمة: اجمع 3 مولدات سيرفر (🔋) في الظلام واهرب عبر المصعد!",
+    itemsNeeded: 3,
+    itemType: "generator",
+    icon: "🔋",
+    itemLabel: "مولدات السيرفر",
+    desc: "غرفة السيرفرات مظلمة! استخدم الكشاف واجمع المولدات قبل أن يصيدك إلياس."
+  },
+  {
+    id: 15,
+    chapter: 3,
+    chapterName: "الفصل 3: تحدي إلياس",
+    monsterType: "elias",
+    monsterName: "إلياس",
+    name: "المرحلة 15: قتال بوس إلياس",
+    themeColor: "#00f0ff",
+    isBossFight: true,
+    hasSlippers: true,
+    bossHp: 60,
+    objectiveText: "⚔️ بوس الفصل 3: ارمِ الزنوبات (👡) على إلياس العملاق ودمّر التحكم!",
+    itemsNeeded: 0,
+    itemType: "slipper",
+    icon: "👡",
+    itemLabel: "الزنوبة الطائرة",
+    desc: "معركة البوس الرقمية ضد إلياس! ارمِ الزنوبات بسرعة واكسر تجميده لفتح الفصل الرابع!"
+  },
+
+  // ─── الفصل 4: مملكة قمر (المراحل 16 - 20) ───
+  {
+    id: 16,
+    chapter: 4,
+    chapterName: "الفصل 4: مملكة قمر",
+    monsterType: "qamar",
+    monsterName: "قمر",
+    name: "المرحلة 16: القصر الملكي",
+    themeColor: "#ff66cc",
+    hasSlippers: true,
+    objectiveText: "🎯 المهمة: اجمع 3 تيجان أثرية (👑) واحذر عكس اتجاهات قمر ثم اهرب!",
+    itemsNeeded: 3,
+    itemType: "key",
+    icon: "👑",
+    itemLabel: "التيجان الأثرية",
+    desc: "احذر من تاج قمر الذي يعكس اتجاهات الحركة! اجمع التيجان واهرب عبر القصر."
+  },
+  {
+    id: 17,
+    chapter: 4,
+    chapterName: "الفصل 4: مملكة قمر",
+    monsterType: "qamar",
+    monsterName: "قمر",
+    name: "المرحلة 17: قاعة البلورات",
+    themeColor: "#ff33aa",
+    pushableCrates: true,
+    hasSlippers: true,
+    objectiveText: "🎯 المهمة: ادفع الصناديق (📦) واجمع 3 بلورات نادرة (🔮) واهرب!",
+    itemsNeeded: 3,
+    itemType: "crystal",
+    icon: "🔮",
+    itemLabel: "البلورات النادرة",
+    desc: "ادفع الصناديق وراقب اتجاهات حركتك بذكاء لتفادي فخاخ الملكة قمر."
+  },
+  {
+    id: 18,
+    chapter: 4,
+    chapterName: "الفصل 4: مملكة قمر",
+    monsterType: "qamar",
+    monsterName: "قمر",
+    name: "المرحلة 18: الحديقة الملكية",
+    themeColor: "#ff0088",
+    hasSpeedPads: true,
+    hasSlippers: true,
+    objectiveText: "🎯 المهمة: قف على 3 رشاشات ماء (💦) واستغل سجادات السرعة للهروب!",
+    itemsNeeded: 3,
+    itemType: "sprinkler",
+    icon: "💦",
+    itemLabel: "رشاشات الحديقة",
+    desc: "استغل سجادات السرعة للانطلاق بسرعة وتجنب التأثر بعكس الاتجاهات."
+  },
+  {
+    id: 19,
+    chapter: 4,
+    chapterName: "الفصل 4: مملكة قمر",
+    monsterType: "qamar",
+    monsterName: "قمر",
+    name: "المرحلة 19: الممر الذهبي",
+    themeColor: "#ff0055",
+    permanentRage: true,
+    hasSlippers: true,
+    objectiveText: "🎯 المهمة: اجمع المفتاح الذهبي (🔑) بوضع الغضب واهرب عبر البوابة!",
+    itemsNeeded: 1,
+    itemType: "key",
+    icon: "🔑",
+    itemLabel: "المفتاح الذهبي",
+    desc: "قمر في وضع الغضب الأقصى! اجمع المفتاح واهرب فوراً نحو البوابة."
+  },
+  {
+    id: 20,
+    chapter: 4,
+    chapterName: "الفصل 4: مملكة قمر",
+    monsterType: "qamar",
+    monsterName: "قمر",
+    name: "المرحلة 20: قتال البوس الأخير",
+    themeColor: "#ff0000",
+    isBossFight: true,
+    hasSlippers: true,
+    bossHp: 70,
+    objectiveText: "👑 المواجهة الحاسمة: ارمِ الزنوبات (👡) على الملكة قمر واختم القصة 100%!",
+    itemsNeeded: 0,
+    itemType: "slipper",
+    icon: "👡",
+    itemLabel: "الزنوبة الطائرة",
+    desc: "معركة القمة الأخيرة في اللعبة! اهزم الملكة قمر واختم طور القصة بنجاح ساحق! 🏆"
   }
 ];
 
