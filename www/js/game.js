@@ -66,13 +66,29 @@ class Game {
 
   initCanvas() {
     const resize = () => {
+      const dpr = window.devicePixelRatio || 1;
+
       this.width = window.innerWidth;
       this.height = window.innerHeight;
-      this.canvas.width = this.width;
-      this.canvas.height = this.height;
 
-      this.minimapCanvas.width = 110;
-      this.minimapCanvas.height = 80;
+      // Set canvas internal resolution scaled by devicePixelRatio
+      // This makes rendering crisp on high-DPI mobile screens
+      this.canvas.width = this.width * dpr;
+      this.canvas.height = this.height * dpr;
+
+      // CSS keeps the canvas at screen size
+      this.canvas.style.width = this.width + 'px';
+      this.canvas.style.height = this.height + 'px';
+
+      // Scale the drawing context so game logic still uses logical pixels
+      this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      // Minimap stays at fixed logical size
+      this.minimapCanvas.width = 110 * dpr;
+      this.minimapCanvas.height = 80 * dpr;
+      this.minimapCanvas.style.width = '110px';
+      this.minimapCanvas.style.height = '80px';
+      this.minimapCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       // Expanded Massive Map Arena (4500 x 3200)
       this.arenaWidth = 4500;
@@ -1068,8 +1084,9 @@ class Game {
     if (this.state !== 'PLAYING') return;
 
     const mctx = this.minimapCtx;
-    const mw = this.minimapCanvas.width;
-    const mh = this.minimapCanvas.height;
+    // Use logical dimensions (not DPR-scaled canvas.width/height)
+    const mw = 110;
+    const mh = 80;
 
     mctx.clearRect(0, 0, mw, mh);
 

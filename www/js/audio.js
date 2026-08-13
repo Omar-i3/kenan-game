@@ -18,6 +18,20 @@ const VOICE_FILES = {
   w7sh:          './w7sh.mp3'
 };
 
+// Asset folder fallback paths (for Capacitor www builds)
+const ASSET_VOICE_FILES = {
+  voice_warak:   './assets/voice_warak.mp3',
+  voice_ray7:    './assets/voice_ray7.mp3',
+  voice_jwal:    './assets/voice_jwal.mp3',
+  voice_mafer:   './assets/voice_mafer.mp3',
+  voice_jayak:   './assets/voice_jayak.mp3',
+  voice_wagaf:   './assets/voice_wagaf.mp3',
+  voice_assabt:  './assets/voice_assabt.mp3',
+  voice_sadtak:  './assets/voice_sadtak.mp3',
+  voice_akaltak: './assets/voice_akaltak.mp3',
+  w7sh:          './assets/w7sh.mp3'
+};
+
 class AudioManager {
   constructor() {
     this.audioContext = null;
@@ -80,13 +94,15 @@ class AudioManager {
     audio._originalPath = path;
     audio._triedAsset = false;
 
-    // Try loading from root path first
+    // Try loading from provided path first
     audio.src = path;
 
     audio.onerror = () => {
       if (!audio._triedAsset) {
         audio._triedAsset = true;
-        audio.src = './assets/' + path.replace('./', '');
+        // Try ./assets/ fallback for Capacitor/www builds
+        const filename = path.split('/').pop();
+        audio.src = './assets/' + filename;
         audio.load();
       }
     };

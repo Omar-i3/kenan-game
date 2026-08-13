@@ -28,7 +28,9 @@ class SoundEffectsManager {
     audio.onerror = () => {
       if (!audio._triedAsset) {
         audio._triedAsset = true;
-        audio.src = './assets/' + path.replace('./', '');
+        // Try ./assets/ fallback for Capacitor/www builds
+        const filename = path.split('/').pop();
+        audio.src = './assets/' + filename;
         audio.load();
       }
     };
