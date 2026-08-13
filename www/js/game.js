@@ -112,18 +112,22 @@ class Game {
     window.addEventListener('orientationchange', checkOrientation);
     checkOrientation();
 
-    // Ultra Reliable Button Binder (onclick)
+    // Ultra-Fast Dual Event Binder for Touch & Pointer (0ms Delay)
     const bindBtn = (id, handler) => {
       const el = document.getElementById(id);
       if (!el) return;
+
       let lastTime = 0;
-      el.onclick = (e) => {
+      const fn = (e) => {
         const now = Date.now();
-        if (now - lastTime < 250) return;
+        if (now - lastTime < 300) return;
         lastTime = now;
         window.audioManager.unlockAudio();
         handler(e);
       };
+
+      el.onpointerdown = fn;
+      el.onclick = fn;
     };
 
     // Mode Toggle Buttons (Endless vs Story Mode)
@@ -156,9 +160,9 @@ class Game {
     const diffBtns = document.querySelectorAll('.diff-btn');
     diffBtns.forEach(btn => {
       let lastTime = 0;
-      btn.onclick = (e) => {
+      const handler = (e) => {
         const now = Date.now();
-        if (now - lastTime < 250) return;
+        if (now - lastTime < 300) return;
         lastTime = now;
         window.audioManager.unlockAudio();
         diffBtns.forEach(b => b.classList.remove('active'));
@@ -167,6 +171,8 @@ class Game {
         this.updateHighScoreDisplay();
         window.hapticsManager.triggerTac();
       };
+      btn.onpointerdown = handler;
+      btn.onclick = handler;
     });
 
     bindBtn('start-btn', () => {
@@ -244,15 +250,17 @@ class Game {
     const audioBtn = document.getElementById('audio-toggle-btn');
     if (audioBtn) {
       let lastTime = 0;
-      audioBtn.onclick = (e) => {
+      const handler = (e) => {
         const now = Date.now();
-        if (now - lastTime < 250) return;
+        if (now - lastTime < 300) return;
         lastTime = now;
         window.audioManager.unlockAudio();
         const isMuted = window.audioManager.toggleMute();
         audioBtn.innerText = isMuted ? '🔇 الصوت: مكتوم' : '🔊 الصوت: مفعّل';
         window.hapticsManager.triggerTac();
       };
+      audioBtn.onpointerdown = handler;
+      audioBtn.onclick = handler;
     }
   }
 
@@ -281,13 +289,15 @@ class Game {
 
       if (isUnlocked) {
         let cardLastTime = 0;
-        card.onclick = (e) => {
+        const playStage = (e) => {
           const now = Date.now();
-          if (now - cardLastTime < 250) return;
+          if (now - cardLastTime < 300) return;
           cardLastTime = now;
           window.audioManager.unlockAudio();
           this.startStoryStage(stg.id);
         };
+        card.onpointerdown = playStage;
+        card.onclick = playStage;
       }
 
       grid.appendChild(card);

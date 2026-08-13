@@ -218,6 +218,17 @@ canvas#gameCanvas {
   justify-content: center;
 }
 
+button {
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  pointer-events: auto !important;
+}
+
+button * {
+  pointer-events: none !important;
+}
+
 .mode-btn {
   flex: 1;
   background: rgba(255, 255, 255, 0.08);
@@ -230,6 +241,7 @@ canvas#gameCanvas {
   font-weight: 800;
   cursor: pointer;
   transition: all 0.2s ease;
+  pointer-events: auto !important;
 }
 
 .mode-btn.active {
