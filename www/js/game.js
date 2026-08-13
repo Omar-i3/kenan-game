@@ -112,24 +112,22 @@ class Game {
     window.addEventListener('orientationchange', checkOrientation);
     checkOrientation();
 
-    // Fast Button Binder (pointerdown + click)
+    // Fast Button Binder (click + touchstart)
     const bindBtn = (id, handler) => {
       const el = document.getElementById(id);
       if (!el) return;
       let fired = false;
       const fn = (e) => {
-        if (e) {
-          e.preventDefault();
-          e.stopPropagation();
-        }
-        window.audioManager.unlockAudio();
         if (fired) return;
         fired = true;
-        setTimeout(() => { fired = false; }, 250);
+        setTimeout(() => { fired = false; }, 200);
+        window.audioManager.unlockAudio();
         handler(e);
       };
-      el.addEventListener('pointerdown', fn);
       el.addEventListener('click', fn);
+      el.addEventListener('touchstart', (e) => {
+        fn(e);
+      }, { passive: true });
     };
 
     // Mode Toggle Buttons (Endless vs Story Mode)
@@ -709,24 +707,10 @@ class Game {
       }
     }
 
-    // Virtual Joystick Movement
+    // Virtual Joystick & Keyboard Movement
     let inputVector = { x: 0, y: 0 };
-    if (window.joystickManager) {
-      inputVector = window.joystickManager.getVector();
-    }
-
-    // Keyboard Fallback (WASD / Arrows)
-    if (inputVector.x === 0 && inputVector.y === 0) {
-      if (window.joystickManager.keys.ArrowLeft || window.joystickManager.keys.KeyA) inputVector.x -= 1;
-      if (window.joystickManager.keys.ArrowRight || window.joystickManager.keys.KeyD) inputVector.x += 1;
-      if (window.joystickManager.keys.ArrowUp || window.joystickManager.keys.KeyW) inputVector.y -= 1;
-      if (window.joystickManager.keys.ArrowDown || window.joystickManager.keys.KeyS) inputVector.y += 1;
-
-      if (inputVector.x !== 0 && inputVector.y !== 0) {
-        const len = Math.hypot(inputVector.x, inputVector.y);
-        inputVector.x /= len;
-        inputVector.y /= len;
-      }
+    if (window.joystickController) {
+      inputVector = window.joystickController.getVector();
     }
 
     // Update Entities
