@@ -20,10 +20,11 @@ class AudioManager {
     this.audioContext = null;
     this.chaseAudio = null;
     this.impactAudio = null;
-    this.chaseGainNode = null;
     this.isMuted = false;
     this.isPlayingChase = false;
     this.isLoaded = false;
+    this.unlockedHTML5 = false;
+    this.unlockedWebAudio = false;
 
     this.baseVolume = 1.0;
     this.voiceDuckingMultiplier = 1.0;
@@ -50,16 +51,22 @@ class AudioManager {
       this.chaseAudio.loop = true;
       this.chaseAudio.preload = 'auto';
       this.chaseAudio.onerror = () => {
-        this.chaseAudio.src = './assets/3ooo.mp3';
-        this.chaseAudio.load();
+        if (!this.chaseAudio._triedAsset) {
+          this.chaseAudio._triedAsset = true;
+          this.chaseAudio.src = './assets/3ooo.mp3';
+          this.chaseAudio.load();
+        }
       };
       this.chaseAudio.load();
 
       this.impactAudio = new Audio('./w7sh.mp3');
       this.impactAudio.preload = 'auto';
       this.impactAudio.onerror = () => {
-        this.impactAudio.src = './assets/w7sh.mp3';
-        this.impactAudio.load();
+        if (!this.impactAudio._triedAsset) {
+          this.impactAudio._triedAsset = true;
+          this.impactAudio.src = './assets/w7sh.mp3';
+          this.impactAudio.load();
+        }
       };
       this.impactAudio.load();
 
@@ -68,23 +75,14 @@ class AudioManager {
         const aud = new Audio(path);
         aud.preload = 'auto';
         aud.onerror = () => {
-          aud.src = './assets/' + path.replace('./', '');
-          aud.load();
+          if (!aud._triedAsset) {
+            aud._triedAsset = true;
+            aud.src = './assets/' + path.replace('./', '');
+            aud.load();
+          }
         };
         aud.load();
         this.voiceAudioMap[key] = aud;
-      }
-
-      // Connect chase audio to Web Audio API gain node if supported
-      if (this.audioContext && this.chaseAudio) {
-        try {
-          const source = this.audioContext.createMediaElementSource(this.chaseAudio);
-          this.chaseGainNode = this.audioContext.createGain();
-          source.connect(this.chaseGainNode);
-          this.chaseGainNode.connect(this.audioContext.destination);
-        } catch (e) {
-          console.warn('MediaElementSource fallback:', e);
-        }
       }
 
       this.isLoaded = true;
@@ -93,13 +91,30 @@ class AudioManager {
     }
   }
 
-  // Ensure AudioContext is resumed after user interaction
+  // Ensure AudioContext and HTML5 Audio are unlocked on user gesture
   unlockAudio() {
+    // 1. Resume Web Audio API AudioContext if suspended
     if (this.audioContext && this.audioContext.state === 'suspended') {
       this.audioContext.resume().catch(() => {});
     }
 
-    // Force warm up preloading audio elements on touch/click
+    if (window.soundEffectsManager && window.soundEffectsManager.audioCtx && window.soundEffectsManager.audioCtx.state === 'suspended') {
+      window.soundEffectsManager.audioCtx.resume().catch(() => {});
+    }
+
+    // 2. Play silent buffer on Web Audio API to unlock mobile browsers (iOS/Android)
+    if (this.audioContext && !this.unlockedWebAudio) {
+      try {
+        const buffer = this.audioContext.createBuffer(1, 1, 22050);
+        const source = this.audioContext.createBufferSource();
+        source.buffer = buffer;
+        source.connect(this.audioContext.destination);
+        source.start(0);
+        this.unlockedWebAudio = true;
+      } catch (e) {}
+    }
+
+    // 3. Force warm up preloading audio elements on touch/click
     if (this.chaseAudio && this.chaseAudio.readyState < 2) {
       this.chaseAudio.load();
     }
@@ -111,6 +126,31 @@ class AudioManager {
         aud.load();
       }
     }
+
+    // 4. Muted micro-play to satisfy strict browser autoplay policies
+    if (!this.unlockedHTML5) {
+      this.unlockedHTML5 = true;
+      const unlockAudioElement = (aud) => {
+        if (!aud) return;
+        try {
+          const originalVol = aud.volume;
+          aud.volume = 0.001;
+          const p = aud.play();
+          if (p !== undefined) {
+            p.then(() => {
+              aud.pause();
+              aud.currentTime = 0;
+              aud.volume = originalVol || 1.0;
+            }).catch(() => {
+              aud.volume = originalVol || 1.0;
+            });
+          }
+        } catch (e) {}
+      };
+
+      unlockAudioElement(this.chaseAudio);
+      unlockAudioElement(this.impactAudio);
+    }
   }
 
   startChase() {
@@ -120,6 +160,7 @@ class AudioManager {
     if (this.chaseAudio) {
       this.chaseAudio.currentTime = 0;
       this.chaseAudio.playbackRate = 1.0;
+      this.applyCurrentVolume();
       const playPromise = this.chaseAudio.play();
       if (playPromise !== undefined) {
         playPromise.then(() => {
@@ -147,6 +188,7 @@ class AudioManager {
 
     this.currentVoiceAudio = voiceAudio;
     this.currentVoiceAudio.currentTime = 0;
+    this.currentVoiceAudio.volume = 1.0;
 
     // 2. Reduce background chase volume by 70% (voiceDuckingMultiplier = 0.3)
     this.voiceDuckingMultiplier = 0.3;
@@ -188,15 +230,11 @@ class AudioManager {
   }
 
   applyCurrentVolume() {
-    const finalVolume = this.baseVolume * this.voiceDuckingMultiplier;
-    try {
-      if (this.chaseGainNode && this.audioContext && this.audioContext.currentTime !== undefined) {
-        this.chaseGainNode.gain.setTargetAtTime(finalVolume, this.audioContext.currentTime, 0.05);
-      } else if (this.chaseAudio) {
+    const finalVolume = Math.max(0, Math.min(1, this.baseVolume * this.voiceDuckingMultiplier));
+    if (this.chaseAudio) {
+      try {
         this.chaseAudio.volume = finalVolume;
-      }
-    } catch (e) {
-      if (this.chaseAudio) this.chaseAudio.volume = finalVolume;
+      } catch (e) {}
     }
   }
 
@@ -210,10 +248,12 @@ class AudioManager {
     this.applyCurrentVolume();
 
     if (this.chaseAudio) {
-      this.chaseAudio.playbackRate = isRage ? 1.25 : 1.0;
+      try {
+        this.chaseAudio.playbackRate = isRage ? 1.25 : 1.0;
+      } catch (e) {}
     }
 
-    if (this.isUsingSynth && this.synthGain) {
+    if (this.isUsingSynth && this.synthGain && this.audioContext) {
       const finalVol = this.baseVolume * this.voiceDuckingMultiplier;
       this.synthGain.gain.setValueAtTime(finalVol * 0.3, this.audioContext.currentTime);
       if (this.synthOscillator) {
@@ -240,6 +280,7 @@ class AudioManager {
     this.unlockAudio();
     if (this.impactAudio) {
       this.impactAudio.currentTime = 0;
+      this.impactAudio.volume = 1.0;
       this.impactAudio.play().catch(err => {
         console.warn('Impact play failed, triggering synth sfx:', err);
         this.playSynthImpact();
@@ -253,6 +294,9 @@ class AudioManager {
   startSynthChase() {
     if (!this.audioContext || this.isUsingSynth) return;
     try {
+      if (this.audioContext.state === 'suspended') {
+        this.audioContext.resume().catch(() => {});
+      }
       this.synthOscillator = this.audioContext.createOscillator();
       this.synthGain = this.audioContext.createGain();
 
@@ -285,6 +329,9 @@ class AudioManager {
   playSynthImpact() {
     if (!this.audioContext) return;
     try {
+      if (this.audioContext.state === 'suspended') {
+        this.audioContext.resume().catch(() => {});
+      }
       const osc = this.audioContext.createOscillator();
       const gain = this.audioContext.createGain();
 
@@ -317,3 +364,17 @@ class AudioManager {
 }
 
 window.audioManager = new AudioManager();
+
+// Global user interaction listener to unlock audio contexts immediately
+const globalAudioUnlocker = () => {
+  if (window.audioManager) {
+    window.audioManager.unlockAudio();
+  }
+  if (window.soundEffectsManager) {
+    window.soundEffectsManager.unlock();
+  }
+};
+
+['pointerdown', 'touchstart', 'mousedown', 'keydown', 'click'].forEach(evt => {
+  window.addEventListener(evt, globalAudioUnlocker, { passive: true });
+});
