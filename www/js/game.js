@@ -393,8 +393,12 @@ class Game {
     // Exit Gate Portal Position (Far Corner)
     this.exitGate = new window.Entities.ExitGate(this.arenaWidth - 280, this.arenaHeight - 280);
 
-    // Spawn Kenan Pursuer
-    this.kenan = new window.Entities.KenanMonster(200, 200, this.difficulty);
+    // Spawn Kenan Pursuer near player (450px) so Kenan is immediately visible on screen!
+    const spawnAngle = Math.random() * Math.PI * 2;
+    const spawnDist = 450;
+    const kenanSpawnX = Math.min(Math.max(this.player.x + Math.cos(spawnAngle) * spawnDist, 150), this.arenaWidth - 150);
+    const kenanSpawnY = Math.min(Math.max(this.player.y + Math.sin(spawnAngle) * spawnDist, 150), this.arenaHeight - 150);
+    this.kenan = new window.Entities.KenanMonster(kenanSpawnX, kenanSpawnY, this.difficulty);
 
     // Hard Mode Jitter
     const container = document.getElementById('game-container');

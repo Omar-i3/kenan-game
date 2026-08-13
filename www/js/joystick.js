@@ -1,5 +1,5 @@
 /**
- * Multi-Input Controller System (Touch Joystick + Mouse Drag + Keyboard WASD/Arrows)
+ * Universal Multi-Input Controller (Touch Joystick + Mouse Click & Drag + Full Keyboard WASD/Arrows)
  */
 class JoystickController {
   constructor() {
@@ -21,120 +21,86 @@ class JoystickController {
       right: false
     };
 
-    this.isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-
-    this.initTouchListeners();
-    this.initPointerListeners();
+    this.initTouchAndMouseListeners();
     this.initKeyboardListeners();
-    this.updateControlsHintVisibility();
   }
 
-  updateControlsHintVisibility() {
-    const hint = document.getElementById('desktop-controls-hint');
-    if (hint) {
-      if (this.isTouchDevice) {
-        hint.classList.add('hidden');
-      } else {
-        hint.classList.remove('hidden');
-      }
-    }
-  }
-
-  initTouchListeners() {
-    const onTouchStart = (e) => {
-      const target = e.target;
+  initTouchAndMouseListeners() {
+    const handleStart = (clientX, clientY, target, id = 'mouse') => {
       if (
         target.closest('button, .diff-btn, .btn-primary, .btn-secondary, .hud-btn, .skill-btn, .glass-panel, .screen-overlay') ||
         (window.game && window.game.state !== 'PLAYING')
       ) {
-        return;
+        return false;
       }
 
-      this.isTouchDevice = true;
-      this.updateControlsHintVisibility();
-
-      if (this.activeTouchId !== null) return;
-
-      const touch = e.changedTouches[0];
-      this.activeTouchId = touch.identifier;
-      this.baseX = touch.clientX;
-      this.baseY = touch.clientY;
+      this.activeTouchId = id;
+      this.isPointerActive = true;
+      this.baseX = clientX;
+      this.baseY = clientY;
 
       if (this.base) {
         this.base.style.left = `${this.baseX}px`;
         this.base.style.top = `${this.baseY}px`;
         this.base.classList.add('visible');
       }
-      this.updateStickPosition(this.baseX, this.baseY);
+      this.updateStickPosition(clientX, clientY);
+      return true;
     };
 
-    const onTouchMove = (e) => {
-      if (this.activeTouchId === null) return;
+    const handleMove = (clientX, clientY) => {
+      if (!this.isPointerActive && this.activeTouchId === null) return;
+      this.updateStickPosition(clientX, clientY);
+    };
 
+    // Touch Listeners
+    window.addEventListener('touchstart', (e) => {
+      if (e.changedTouches && e.changedTouches.length > 0) {
+        const touch = e.changedTouches[0];
+        handleStart(touch.clientX, touch.clientY, e.target, touch.identifier);
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+      if (this.activeTouchId === null) return;
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
         if (touch.identifier === this.activeTouchId) {
-          this.updateStickPosition(touch.clientX, touch.clientY);
+          handleMove(touch.clientX, touch.clientY);
           break;
         }
       }
-    };
+    }, { passive: true });
 
-    const onTouchEnd = (e) => {
+    window.addEventListener('touchend', (e) => {
       if (this.activeTouchId === null) return;
-
       for (let i = 0; i < e.changedTouches.length; i++) {
         if (e.changedTouches[i].identifier === this.activeTouchId) {
           this.reset();
           break;
         }
       }
-    };
+    }, { passive: true });
 
-    window.addEventListener('touchstart', onTouchStart, { passive: true });
-    window.addEventListener('touchmove', onTouchMove, { passive: true });
-    window.addEventListener('touchend', onTouchEnd, { passive: true });
-    window.addEventListener('touchcancel', onTouchEnd, { passive: true });
-  }
+    window.addEventListener('touchcancel', () => this.reset(), { passive: true });
 
-  initPointerListeners() {
-    const onPointerDown = (e) => {
-      if (this.isTouchDevice && e.pointerType === 'touch') return;
-      const target = e.target;
-      if (
-        target.closest('button, .diff-btn, .btn-primary, .btn-secondary, .hud-btn, .skill-btn, .glass-panel, .screen-overlay') ||
-        (window.game && window.game.state !== 'PLAYING')
-      ) {
-        return;
+    // Mouse Listeners
+    window.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return; // Only left mouse button
+      handleStart(e.clientX, e.clientY, e.target, 'mouse');
+    }, { passive: true });
+
+    window.addEventListener('mousemove', (e) => {
+      if (this.activeTouchId === 'mouse') {
+        handleMove(e.clientX, e.clientY);
       }
+    }, { passive: true });
 
-      this.isPointerActive = true;
-      this.baseX = e.clientX;
-      this.baseY = e.clientY;
-
-      if (this.base) {
-        this.base.style.left = `${this.baseX}px`;
-        this.base.style.top = `${this.baseY}px`;
-        this.base.classList.add('visible');
-      }
-      this.updateStickPosition(this.baseX, this.baseY);
-    };
-
-    const onPointerMove = (e) => {
-      if (!this.isPointerActive) return;
-      this.updateStickPosition(e.clientX, e.clientY);
-    };
-
-    const onPointerUp = () => {
-      if (this.isPointerActive) {
+    window.addEventListener('mouseup', () => {
+      if (this.activeTouchId === 'mouse') {
         this.reset();
       }
-    };
-
-    window.addEventListener('pointerdown', onPointerDown, { passive: true });
-    window.addEventListener('pointermove', onPointerMove, { passive: true });
-    window.addEventListener('pointerup', onPointerUp, { passive: true });
-    window.addEventListener('pointercancel', onPointerUp, { passive: true });
+    }, { passive: true });
   }
 
   updateStickPosition(clientX, clientY) {
@@ -142,18 +108,20 @@ class JoystickController {
     let dy = clientY - this.baseY;
     const distance = Math.hypot(dx, dy);
 
-    if (distance > this.maxRadius) {
-      const angle = Math.atan2(dy, dx);
-      dx = Math.cos(angle) * this.maxRadius;
-      dy = Math.sin(angle) * this.maxRadius;
-    }
+    if (distance > 0.1) {
+      if (distance > this.maxRadius) {
+        const angle = Math.atan2(dy, dx);
+        dx = Math.cos(angle) * this.maxRadius;
+        dy = Math.sin(angle) * this.maxRadius;
+      }
 
-    if (this.stick) {
-      this.stick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-    }
+      if (this.stick) {
+        this.stick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+      }
 
-    this.inputVector.x = dx / this.maxRadius;
-    this.inputVector.y = dy / this.maxRadius;
+      this.inputVector.x = dx / this.maxRadius;
+      this.inputVector.y = dy / this.maxRadius;
+    }
   }
 
   initKeyboardListeners() {
