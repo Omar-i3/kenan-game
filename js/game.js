@@ -980,7 +980,7 @@ class Game {
 
     // Compute dynamic adaptive camera zoom scale so characters & items are BIG, bold & crisp on mobile
     const minDim = Math.min(this.width, this.height) || 400;
-    this.zoomScale = Math.max(1.35, Math.min(2.0, 650 / minDim));
+    this.zoomScale = Math.max(0.85, Math.min(1.15, minDim / 450));
 
     const visibleW = this.width / this.zoomScale;
     const visibleH = this.height / this.zoomScale;
