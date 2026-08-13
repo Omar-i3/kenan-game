@@ -15,7 +15,16 @@ const VOICE_FILES = {
   voice_assabt:  './voice_assabt.mp3',
   voice_sadtak:  './voice_sadtak.mp3',
   voice_akaltak: './voice_akaltak.mp3',
-  w7sh:          './w7sh.mp3'
+  w7sh:          './w7sh.mp3',
+  aseel_1:       './assets/aseel_1.mp3',
+  aseel_2:       './assets/aseel_2.mp3',
+  aseel_3:       './assets/aseel_3.mp3',
+  elias_1:       './assets/elias_1.mp3',
+  elias_2:       './assets/elias_2.mp3',
+  elias_3:       './assets/elias_3.mp3',
+  qamar_1:       './assets/qamar_1.mp3',
+  qamar_2:       './assets/qamar_2.mp3',
+  qamar_3:       './assets/qamar_3.mp3'
 };
 
 // Asset folder fallback paths (for Capacitor www builds)
@@ -29,7 +38,16 @@ const ASSET_VOICE_FILES = {
   voice_assabt:  './assets/voice_assabt.mp3',
   voice_sadtak:  './assets/voice_sadtak.mp3',
   voice_akaltak: './assets/voice_akaltak.mp3',
-  w7sh:          './assets/w7sh.mp3'
+  w7sh:          './assets/w7sh.mp3',
+  aseel_1:       './assets/aseel_1.mp3',
+  aseel_2:       './assets/aseel_2.mp3',
+  aseel_3:       './assets/aseel_3.mp3',
+  elias_1:       './assets/elias_1.mp3',
+  elias_2:       './assets/elias_2.mp3',
+  elias_3:       './assets/elias_3.mp3',
+  qamar_1:       './assets/qamar_1.mp3',
+  qamar_2:       './assets/qamar_2.mp3',
+  qamar_3:       './assets/qamar_3.mp3'
 };
 
 class AudioManager {
@@ -240,6 +258,22 @@ class AudioManager {
         console.warn(`[AudioManager] Voice play failed for ${voiceKey}:`, err.message);
         onVoiceEnd();
       });
+    }
+  }
+
+  playMonsterVoice(monsterType) {
+    if (monsterType === 'kenan') {
+      const keys = ['voice_warak', 'voice_ray7', 'voice_jwal', 'voice_mafer', 'voice_jayak', 'voice_wagaf'];
+      this.playVoice(keys[Math.floor(Math.random() * keys.length)]);
+    } else if (monsterType === 'aseel') {
+      const keys = ['aseel_1', 'aseel_2', 'aseel_3'];
+      this.playVoice(keys[Math.floor(Math.random() * keys.length)]);
+    } else if (monsterType === 'elias') {
+      const keys = ['elias_1', 'elias_2', 'elias_3'];
+      this.playVoice(keys[Math.floor(Math.random() * keys.length)]);
+    } else if (monsterType === 'qamar') {
+      const keys = ['qamar_1', 'qamar_2', 'qamar_3'];
+      this.playVoice(keys[Math.floor(Math.random() * keys.length)]);
     }
   }
 

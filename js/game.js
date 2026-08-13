@@ -28,8 +28,16 @@ class Game {
     this.highScores = {
       easy: parseFloat(localStorage.getItem('kenan_highscore_easy') || '0.0'),
       normal: parseFloat(localStorage.getItem('kenan_highscore_normal') || '0.0'),
-      hard: parseFloat(localStorage.getItem('kenan_highscore_hard') || '0.0')
+      hard: parseFloat(localStorage.getItem('kenan_highscore_hard') || '0.0'),
+      chase: parseFloat(localStorage.getItem('kenan_highscore_chase') || '0.0')
     };
+
+    // Chase Mode State & Pursuers
+    this.chaseSelectionType = 'SINGLE'; // 'SINGLE' or 'GROUP'
+    this.chaseSelectedMonsters = ['kenan'];
+    this.activeChaseMonsters = [];
+    this.monsterToolItems = [];
+    this.monsterToolSpawnTimer = 0;
 
     // Camera State
     this.camera = { x: 0, y: 0 };
@@ -153,21 +161,109 @@ class Game {
       el.onclick = fn;
     };
 
-    // Mode Toggle Buttons (Endless vs Story Mode)
+    // Mode Toggle Buttons (Endless vs Chase vs Story Mode)
     bindBtn('mode-endless-btn', () => {
       this.gameMode = 'ENDLESS';
       document.getElementById('mode-endless-btn').classList.add('active');
+      document.getElementById('mode-chase-btn').classList.remove('active');
       document.getElementById('mode-story-btn').classList.remove('active');
       document.getElementById('endless-options-box').classList.remove('hidden');
       document.getElementById('story-options-box').classList.add('hidden');
+    });
+
+    bindBtn('mode-chase-btn', () => {
+      this.gameMode = 'CHASE';
+      this.openChaseModeScreen();
     });
 
     bindBtn('mode-story-btn', () => {
       this.gameMode = 'STORY';
       document.getElementById('mode-story-btn').classList.add('active');
       document.getElementById('mode-endless-btn').classList.remove('active');
+      document.getElementById('mode-chase-btn').classList.remove('active');
       document.getElementById('endless-options-box').classList.add('hidden');
       document.getElementById('story-options-box').classList.remove('hidden');
+    });
+
+    // Chase Mode Single vs Group Toggle
+    bindBtn('chase-mode-single-btn', () => {
+      this.chaseSelectionType = 'SINGLE';
+      document.getElementById('chase-mode-single-btn').classList.add('active');
+      document.getElementById('chase-mode-group-btn').classList.remove('active');
+      const cards = document.querySelectorAll('.chase-card');
+      let found = false;
+      cards.forEach(c => {
+        const chk = c.querySelector('.chase-chk');
+        if (!found && chk && chk.checked) {
+          found = true;
+        } else if (chk) {
+          chk.checked = false;
+          c.classList.remove('selected');
+        }
+      });
+      if (!found) {
+        const kenanCard = document.querySelector('.chase-card[data-monster="kenan"]');
+        if (kenanCard) {
+          kenanCard.classList.add('selected');
+          const chk = kenanCard.querySelector('.chase-chk');
+          if (chk) chk.checked = true;
+        }
+      }
+    });
+
+    bindBtn('chase-mode-group-btn', () => {
+      this.chaseSelectionType = 'GROUP';
+      document.getElementById('chase-mode-group-btn').classList.add('active');
+      document.getElementById('chase-mode-single-btn').classList.remove('active');
+    });
+
+    // Chase Monster Cards click handler
+    const chaseCards = document.querySelectorAll('.chase-card');
+    chaseCards.forEach(card => {
+      let lastTime = 0;
+      const fn = (e) => {
+        const now = Date.now();
+        if (now - lastTime < 250) return;
+        lastTime = now;
+        window.audioManager.unlockAudio();
+
+        const chk = card.querySelector('.chase-chk');
+        if (!chk) return;
+
+        if (this.chaseSelectionType === 'SINGLE') {
+          chaseCards.forEach(c => {
+            c.classList.remove('selected');
+            const k = c.querySelector('.chase-chk');
+            if (k) k.checked = false;
+          });
+          card.classList.add('selected');
+          chk.checked = true;
+        } else {
+          const willBeChecked = !chk.checked;
+          if (!willBeChecked) {
+            const checkedCount = document.querySelectorAll('.chase-chk:checked').length;
+            if (checkedCount <= 1) return;
+          }
+          chk.checked = willBeChecked;
+          if (willBeChecked) card.classList.add('selected');
+          else card.classList.remove('selected');
+        }
+        window.hapticsManager.triggerTac();
+      };
+
+      card.onpointerdown = fn;
+      card.onclick = fn;
+    });
+
+    bindBtn('start-chase-btn', () => {
+      lockLandscape();
+      this.startChaseGame();
+      window.hapticsManager.triggerTac();
+    });
+
+    bindBtn('close-chase-btn', () => {
+      document.getElementById('chase-mode-screen').classList.add('hidden');
+      document.getElementById('start-screen').classList.remove('hidden');
     });
 
     bindBtn('open-story-stages-btn', () => {
@@ -287,9 +383,25 @@ class Game {
     }
   }
 
+  openChaseModeScreen() {
+    this.state = 'CHASE_SELECT';
+    document.getElementById('start-screen').classList.add('hidden');
+    document.getElementById('victory-screen').classList.add('hidden');
+    document.getElementById('game-over-screen').classList.add('hidden');
+    document.getElementById('stage-select-screen').classList.add('hidden');
+    document.getElementById('hud-layer').classList.add('hidden');
+
+    const hs = this.highScores.chase || 0.0;
+    const hsEl = document.getElementById('chase-high-score-val');
+    if (hsEl) hsEl.innerText = hs.toFixed(1);
+
+    document.getElementById('chase-mode-screen').classList.remove('hidden');
+  }
+
   openStageSelectScreen() {
     this.state = 'STAGE_SELECT';
     document.getElementById('start-screen').classList.add('hidden');
+    document.getElementById('chase-mode-screen').classList.add('hidden');
     document.getElementById('victory-screen').classList.add('hidden');
     document.getElementById('game-over-screen').classList.add('hidden');
     document.getElementById('hud-layer').classList.add('hidden');
@@ -400,6 +512,11 @@ class Game {
     this.slippers = [];
     this.activePowerUp = null;
 
+    // Chase Mode Pursuers & Tools Reset
+    this.activeChaseMonsters = [];
+    this.monsterToolItems = [];
+    this.monsterToolSpawnTimer = 0;
+
     // Slipper Spawn State for Endless Survival Mode
     this.slipperSpawnTriggered = false;
     this.slipperSpawnTimer = 0;
@@ -412,6 +529,9 @@ class Game {
     document.getElementById('hud-objective-banner').classList.add('hidden');
     document.getElementById('boss-health-container').classList.add('hidden');
     
+    const debuffInd = document.getElementById('debuff-indicator');
+    if (debuffInd) debuffInd.classList.add('hidden');
+
     const slipperAlert = document.getElementById('slipper-alert-banner');
     if (slipperAlert) slipperAlert.classList.add('hidden');
 
@@ -462,6 +582,65 @@ class Game {
       new window.Entities.SpeedBoostPad(this.arenaWidth * 0.50, this.arenaHeight * 0.15),
       new window.Entities.SpeedBoostPad(this.arenaWidth * 0.50, this.arenaHeight * 0.85)
     ];
+  }
+
+  startChaseGame() {
+    this.gameMode = 'CHASE';
+    this.setupBaseArena();
+    this.activeChaseMonsters = [];
+    this.monsterToolItems = [];
+    this.monsterToolSpawnTimer = 0;
+
+    // Collect checked monsters from chase screen
+    const selectedKeys = [];
+    const chks = document.querySelectorAll('.chase-chk:checked');
+    chks.forEach(chk => {
+      const card = chk.closest('.chase-card');
+      if (card && card.dataset.monster) {
+        selectedKeys.push(card.dataset.monster);
+      }
+    });
+
+    if (selectedKeys.length === 0) selectedKeys.push('kenan');
+    this.chaseSelectedMonsters = selectedKeys;
+
+    // Remove base kenan pursuer if Kenan is not selected in Chase mode
+    if (!selectedKeys.includes('kenan')) {
+      this.kenan = null;
+    }
+
+    // Spawn pursuers around player
+    const spawnDist = 550;
+    let angleOffset = 0;
+    const angleStep = (Math.PI * 2) / selectedKeys.length;
+
+    selectedKeys.forEach(mKey => {
+      const px = this.player ? this.player.x : this.arenaWidth / 2;
+      const py = this.player ? this.player.y : this.arenaHeight / 2;
+      const mx = Math.min(Math.max(px + Math.cos(angleOffset) * spawnDist, 200), this.arenaWidth - 200);
+      const my = Math.min(Math.max(py + Math.sin(angleOffset) * spawnDist, 200), this.arenaHeight - 200);
+
+      if (mKey === 'kenan') {
+        this.kenan = new window.Entities.KenanMonster(mx, my, this.difficulty);
+      } else {
+        this.activeChaseMonsters.push(new window.Entities.ChaseMonster(mKey, mx, my, this.difficulty));
+      }
+
+      angleOffset += angleStep;
+    });
+
+    this.state = 'PLAYING';
+    this.lastTime = performance.now();
+
+    document.getElementById('start-screen').classList.add('hidden');
+    document.getElementById('chase-mode-screen').classList.add('hidden');
+    document.getElementById('stage-select-screen').classList.add('hidden');
+    document.getElementById('pause-screen').classList.add('hidden');
+    document.getElementById('game-over-screen').classList.add('hidden');
+    document.getElementById('victory-screen').classList.add('hidden');
+    document.getElementById('hud-layer').classList.remove('hidden');
+
+    window.audioManager.startChase();
   }
 
   startEndlessGame() {
@@ -651,6 +830,10 @@ class Game {
     if (this.gameMode === 'ENDLESS' && this.score > this.highScores[this.difficulty]) {
       this.highScores[this.difficulty] = this.score;
       localStorage.setItem(`kenan_highscore_${this.difficulty}`, this.score.toFixed(1));
+      isNewRecord = true;
+    } else if (this.gameMode === 'CHASE' && this.score > (this.highScores.chase || 0.0)) {
+      this.highScores.chase = this.score;
+      localStorage.setItem('kenan_highscore_chase', this.score.toFixed(1));
       isNewRecord = true;
     }
 
@@ -853,8 +1036,97 @@ class Game {
       }
     });
 
+    // Update active Chase Mode monsters
+    this.activeChaseMonsters.forEach(m => {
+      if (this.player) {
+        m.update(dt, this.player.x, this.player.y, this.arenaWidth, this.arenaHeight, this.obstacles, this.doors, this.particles);
+      }
+    });
+
+    // Update active Monster Tool Items
+    for (let i = this.monsterToolItems.length - 1; i >= 0; i--) {
+      const item = this.monsterToolItems[i];
+      item.update(dt);
+      if (item.lifespan <= 0) this.monsterToolItems.splice(i, 1);
+    }
+
+    // Periodically spawn Monster Tools during Chase Mode (every 11s)
+    if (this.gameMode === 'CHASE' && this.activeChaseMonsters.length > 0) {
+      this.monsterToolSpawnTimer += dt;
+      if (this.monsterToolSpawnTimer >= 11.0 && this.monsterToolItems.length < 6) {
+        this.monsterToolSpawnTimer = 0;
+        const availableTools = [];
+        this.activeChaseMonsters.forEach(m => {
+          if (m.toolType) availableTools.push(m.toolType);
+        });
+
+        if (availableTools.length > 0) {
+          const pickedTool = availableTools[Math.floor(Math.random() * availableTools.length)];
+          const padding = 250;
+          const tx = padding + Math.random() * (this.arenaWidth - padding * 2);
+          const ty = padding + Math.random() * (this.arenaHeight - padding * 2);
+          this.monsterToolItems.push(new window.Entities.MonsterToolItem(tx, ty, pickedTool));
+        }
+      }
+    }
+
+    // Collisions: Player vs Monster Tool Items
+    for (let i = this.monsterToolItems.length - 1; i >= 0; i--) {
+      const item = this.monsterToolItems[i];
+      if (!item.isCollected && this.player) {
+        const dist = Math.hypot(this.player.x - item.x, this.player.y - item.y);
+        if (dist < (this.player.radius + item.radius)) {
+          item.isCollected = true;
+          this.monsterToolItems.splice(i, 1);
+          window.hapticsManager.triggerImpact();
+          window.soundEffectsManager.playBossHitSound();
+
+          if (item.type === 'wand') {
+            this.player.slowTimer = 3.5;
+          } else if (item.type === 'controller') {
+            this.player.freezeJoystickTimer = 2.5;
+          } else if (item.type === 'tiara') {
+            this.player.reverseControlTimer = 3.5;
+          }
+        }
+      }
+    }
+
+    // Collisions: Player vs Active Chase Monsters (Aseel, Elias, Qamar)
+    this.activeChaseMonsters.forEach(m => {
+      if (this.player) {
+        const dist = Math.hypot(this.player.x - m.x, this.player.y - m.y);
+        if (dist < (this.player.radius + m.radius - 8)) {
+          this.gameOver();
+          return;
+        }
+      }
+    });
+
+    // Update HUD Debuff Status Indicator
+    const debuffInd = document.getElementById('debuff-indicator');
+    const debuffIcon = document.getElementById('debuff-icon');
+    const debuffText = document.getElementById('debuff-text');
+    if (debuffInd && debuffIcon && debuffText && this.player) {
+      if (this.player.freezeJoystickTimer > 0) {
+        debuffInd.classList.remove('hidden');
+        debuffIcon.innerText = '🎮';
+        debuffText.innerText = `التحكم مجمد! (${Math.ceil(this.player.freezeJoystickTimer)}s)`;
+      } else if (this.player.reverseControlTimer > 0) {
+        debuffInd.classList.remove('hidden');
+        debuffIcon.innerText = '👑';
+        debuffText.innerText = `الاتجاهات معكوسة! (${Math.ceil(this.player.reverseControlTimer)}s)`;
+      } else if (this.player.slowTimer > 0) {
+        debuffInd.classList.remove('hidden');
+        debuffIcon.innerText = '🪄';
+        debuffText.innerText = `متباطئ! (${Math.ceil(this.player.slowTimer)}s)`;
+      } else {
+        debuffInd.classList.add('hidden');
+      }
+    }
+
     // Proximity Heartbeat Audio Feedback & Haptics
-    const distToKenan = Math.hypot(this.player.x - this.kenan.x, this.player.y - this.kenan.y);
+    const distToKenan = this.kenan ? Math.hypot(this.player.x - this.kenan.x, this.player.y - this.kenan.y) : 99999;
     const maxDiag = Math.hypot(this.arenaWidth, this.arenaHeight);
     const now = performance.now();
 
@@ -870,7 +1142,7 @@ class Game {
     }
 
     // Collisions: Player vs Kenan Real
-    if (distToKenan < (this.player.radius + this.kenan.radius - 8)) {
+    if (this.kenan && distToKenan < (this.player.radius + this.kenan.radius - 8)) {
       this.gameOver();
       return;
     }
@@ -1084,6 +1356,8 @@ class Game {
     this.powerUps.forEach(pu => pu.draw(this.ctx));
     this.particles.forEach(p => p.draw(this.ctx));
     this.clones.forEach(clone => clone.draw(this.ctx));
+    this.monsterToolItems.forEach(item => item.draw(this.ctx));
+    this.activeChaseMonsters.forEach(m => m.draw(this.ctx, this.particles, this.isNightMode));
 
     if (this.kenan) this.kenan.draw(this.ctx, this.particles, this.isNightMode);
 
@@ -1200,6 +1474,13 @@ class Game {
       mctx.arc(this.kenan.x * scaleX, this.kenan.y * scaleY, this.kenan.isBoss ? 7 : 4.5, 0, Math.PI * 2);
       mctx.fill();
     }
+
+    this.activeChaseMonsters.forEach(m => {
+      mctx.fillStyle = m.themeColor || '#ff00aa';
+      mctx.beginPath();
+      mctx.arc(m.x * scaleX, m.y * scaleY, 4.5, 0, Math.PI * 2);
+      mctx.fill();
+    });
 
     const visibleW = this.width / (this.zoomScale || 1);
     const visibleH = this.height / (this.zoomScale || 1);

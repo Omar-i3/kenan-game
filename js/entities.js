@@ -31,6 +31,12 @@ const ASSET_PATHS = {
   wire: './assets/item_wire.png',
   candy: './assets/item_candy.png',
   slipper: './assets/item_slipper.png',
+  wand: './assets/item_wand.png',
+  controller: './assets/item_controller.png',
+  tiara: './assets/item_tiara.png',
+  aseel: './assets/aseel.png',
+  elias: './assets/elias.png',
+  qamar: './assets/qamar.png',
   keycard: './assets/item_key.png',
   generator: './assets/item_switch.png',
   crystal: './assets/obstacle_crystal.png',
@@ -123,13 +129,18 @@ class Player {
     this.speedBoostTimer = 0;
     this.padSpeedBoostTimer = 0;
 
+    // Chase Mode Monster Debuff Timers
+    this.slowTimer = 0;             // Aseel Wand (Slow 50%)
+    this.freezeJoystickTimer = 0;   // Elias Controller (Freeze joystick input)
+    this.reverseControlTimer = 0;   // Qamar Tiara (Reverse controls)
+
     // Item Inventory
     this.bananaTraps = 2;
     this.slippers = 0;
   }
 
   triggerDash() {
-    if (this.dashCooldown <= 0) {
+    if (this.dashCooldown <= 0 && this.freezeJoystickTimer <= 0) {
       this.dashDuration = 0.35;
       this.dashCooldown = 8.0;
       window.soundEffectsManager.playDashSound();
@@ -143,9 +154,26 @@ class Player {
     if (this.speedBoostTimer > 0) this.speedBoostTimer -= dt;
     if (this.padSpeedBoostTimer > 0) this.padSpeedBoostTimer -= dt;
 
+    if (this.slowTimer > 0) this.slowTimer -= dt;
+    if (this.freezeJoystickTimer > 0) this.freezeJoystickTimer -= dt;
+    if (this.reverseControlTimer > 0) this.reverseControlTimer -= dt;
+
+    let vecX = inputVector.x;
+    let vecY = inputVector.y;
+
+    if (this.freezeJoystickTimer > 0) {
+      vecX = 0;
+      vecY = 0;
+    } else if (this.reverseControlTimer > 0) {
+      vecX = -vecX;
+      vecY = -vecY;
+    }
+
     let currentSpeed = this.speed;
 
-    if (this.dashDuration > 0) {
+    if (this.slowTimer > 0) {
+      currentSpeed *= 0.5; // 50% slow from Aseel's Wand
+    } else if (this.dashDuration > 0) {
       currentSpeed *= this.dashMultiplier;
     } else if (this.speedBoostTimer > 0) {
       currentSpeed *= 1.5;
@@ -153,10 +181,10 @@ class Player {
       currentSpeed *= 1.7;
     }
 
-    if (inputVector.x !== 0 || inputVector.y !== 0) {
-      this.angle = Math.atan2(inputVector.y, inputVector.x);
-      this.vx = inputVector.x * currentSpeed;
-      this.vy = inputVector.y * currentSpeed;
+    if (vecX !== 0 || vecY !== 0) {
+      this.angle = Math.atan2(vecY, vecX);
+      this.vx = vecX * currentSpeed;
+      this.vy = vecY * currentSpeed;
     } else {
       this.vx *= 0.8;
       this.vy *= 0.8;
@@ -1326,11 +1354,248 @@ class SlipperProjectile {
   }
 }
 
+/**
+ * Generic Chase Monster Entity for Chase Mode (Aseel, Elias, Qamar)
+ * Leaves original KenanMonster untouched!
+ */
+class ChaseMonster {
+  constructor(type, x, y, difficulty = 'normal') {
+    this.type = type; // 'aseel', 'elias', 'qamar'
+    this.x = x;
+    this.y = y;
+    this.radius = 38;
+    this.angle = 0;
+    this.difficulty = difficulty;
+
+    this.configureMonster();
+
+    this.memeTimer = Math.random() * 3.0;
+    this.memeInterval = 4.0;
+    this.currentQuote = this.quotes[0] || "";
+  }
+
+  configureMonster() {
+    if (this.type === 'aseel') {
+      this.name = 'أسيل';
+      this.baseSpeed = 265;
+      this.turnRate = 0.14;
+      this.themeColor = '#aa00ff';
+      this.img = ASSET_IMAGES['aseel'];
+      this.quotes = ["العصا السحرية جاياك!", "رح أبطئ حركتك!", "وقفي مكانك!"];
+      this.toolType = 'wand';
+    } else if (this.type === 'elias') {
+      this.name = 'إلياس';
+      this.baseSpeed = 270;
+      this.turnRate = 0.16;
+      this.themeColor = '#00f0ff';
+      this.img = ASSET_IMAGES['elias'];
+      this.quotes = ["الكنترولر معطل!", "جمّدت تحكمك!", "ما رح تقدر تتحرك!"];
+      this.toolType = 'controller';
+    } else if (this.type === 'qamar') {
+      this.name = 'قمر';
+      this.baseSpeed = 260;
+      this.turnRate = 0.13;
+      this.themeColor = '#ff66cc';
+      this.img = ASSET_IMAGES['qamar'];
+      this.quotes = ["تاج الأميرة يعكس اتجاهك!", "وين رايح بالمقلوب؟", "احذر التاج!"];
+      this.toolType = 'tiara';
+    } else {
+      this.name = 'وحش';
+      this.baseSpeed = 250;
+      this.turnRate = 0.12;
+      this.themeColor = '#ff3366';
+      this.img = null;
+      this.quotes = ["جايك!"];
+      this.toolType = null;
+    }
+
+    if (this.difficulty === 'easy') this.baseSpeed *= 0.82;
+    if (this.difficulty === 'hard') this.baseSpeed *= 1.22;
+  }
+
+  update(dt, playerX, playerY, arenaWidth, arenaHeight, obstacles, doors, particles) {
+    this.memeTimer += dt;
+    if (this.memeTimer >= this.memeInterval) {
+      this.memeTimer = 0;
+      this.memeInterval = 4.5 + Math.random() * 3.0;
+      this.currentQuote = this.quotes[Math.floor(Math.random() * this.quotes.length)];
+      if (window.audioManager) {
+        window.audioManager.playMonsterVoice(this.type);
+      }
+    }
+
+    const currentSpeed = this.baseSpeed;
+    const targetDx = playerX - this.x;
+    const targetDy = playerY - this.y;
+    const targetAngle = Math.atan2(targetDy, targetDx);
+
+    let diffAngle = targetAngle - this.angle;
+    while (diffAngle < -Math.PI) diffAngle += Math.PI * 2;
+    while (diffAngle > Math.PI) diffAngle -= Math.PI * 2;
+
+    this.angle += diffAngle * Math.min(1.0, this.turnRate * 60 * dt);
+
+    let nextX = this.x + Math.cos(this.angle) * currentSpeed * dt;
+    let nextY = this.y + Math.sin(this.angle) * currentSpeed * dt;
+
+    for (const obs of obstacles) {
+      const col = obs.checkCollision(nextX, nextY, this.radius);
+      if (col.collided) {
+        nextX += col.normalX * col.overlap;
+        nextY += col.normalY * col.overlap;
+      }
+    }
+
+    for (const door of doors) {
+      if (door.isClosed && !door.isBroken) {
+        const col = door.checkCollision(nextX, nextY, this.radius);
+        if (col.collided) {
+          nextX += col.normalX * col.overlap;
+          nextY += col.normalY * col.overlap;
+          door.bash(dt, particles);
+        }
+      }
+    }
+
+    this.x = Math.min(Math.max(nextX, this.radius), arenaWidth - this.radius);
+    this.y = Math.min(Math.max(nextY, this.radius), arenaHeight - this.radius);
+  }
+
+  draw(ctx, particles, isNightMode = false) {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+
+    ctx.shadowColor = this.themeColor;
+    ctx.shadowBlur = 24;
+
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius + 10, 0, Math.PI * 2);
+    ctx.fillStyle = this.themeColor + '44';
+    ctx.fill();
+
+    ctx.rotate(this.angle);
+
+    const imgSize = this.radius * 2.7;
+    if (this.img && this.img.complete && this.img.naturalWidth > 0) {
+      ctx.drawImage(this.img, -imgSize / 2, -imgSize / 2, imgSize, imgSize);
+    } else {
+      ctx.fillStyle = this.themeColor;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(14, 0, 10, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
+    this.drawSpeechBubble(ctx);
+  }
+
+  drawSpeechBubble(ctx) {
+    const text = this.currentQuote || "جايك!";
+    ctx.save();
+    ctx.font = 'bold 15px Tajawal, sans-serif';
+
+    const padding = 12;
+    const textWidth = ctx.measureText(text).width;
+    const boxWidth = textWidth + padding * 2;
+    const boxHeight = 30;
+    const boxX = this.x - boxWidth / 2;
+    const boxY = this.y - this.radius - 50;
+
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 10);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(this.x - 6, boxY + boxHeight);
+    ctx.lineTo(this.x, boxY + boxHeight + 8);
+    ctx.lineTo(this.x + 6, boxY + boxHeight);
+    ctx.fill();
+
+    ctx.fillStyle = '#000000';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, this.x, boxY + boxHeight / 2);
+    ctx.restore();
+  }
+}
+
+/**
+ * Monster Tool Item (Wand, Controller, Tiara) dropped during Chase Mode
+ */
+class MonsterToolItem {
+  constructor(x, y, type) {
+    this.x = x;
+    this.y = y;
+    this.type = type; // 'wand', 'controller', 'tiara'
+    this.radius = 24;
+    this.isCollected = false;
+    this.animTimer = Math.random() * Math.PI * 2;
+    this.lifespan = 18.0;
+  }
+
+  update(dt) {
+    this.animTimer += dt * 3.5;
+    this.lifespan -= dt;
+  }
+
+  draw(ctx) {
+    if (this.isCollected || this.lifespan <= 0) return;
+
+    ctx.save();
+    ctx.translate(this.x, this.y);
+
+    const floatOffset = Math.sin(this.animTimer) * 5;
+    ctx.translate(0, floatOffset);
+
+    let color = '#aa00ff';
+    let icon = '🪄';
+
+    if (this.type === 'controller') {
+      color = '#00f0ff';
+      icon = '🎮';
+    } else if (this.type === 'tiara') {
+      color = '#ff66cc';
+      icon = '👑';
+    }
+
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 18;
+
+    ctx.fillStyle = color + '44';
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius + 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    const toolImg = ASSET_IMAGES[this.type];
+    if (toolImg && toolImg.complete && toolImg.naturalWidth > 0) {
+      const tSize = this.radius * 2.5;
+      ctx.drawImage(toolImg, -tSize / 2, -tSize / 2, tSize, tSize);
+    } else {
+      ctx.font = '24px Cairo, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(icon, 0, 0);
+    }
+
+    ctx.restore();
+  }
+}
+
 window.Entities = {
   Particle,
   Player,
   KenanMonster,
   KenanClone,
+  ChaseMonster,
+  MonsterToolItem,
   BananaTrap,
   SpeedBoostPad,
   InteractiveDoor,

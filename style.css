@@ -787,6 +787,100 @@ button * {
   overflow: hidden;
 }
 
+/* Debuff HUD Status Bar Indicator */
+.debuff-indicator {
+  position: absolute;
+  top: 55px;
+  right: 110px;
+  background: rgba(255, 0, 68, 0.88);
+  border: 1.5px solid var(--secondary-color);
+  border-radius: 12px;
+  padding: 4px 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 0 12px rgba(255, 0, 68, 0.6);
+  font-size: 0.82rem;
+  font-weight: 900;
+  color: #fff;
+  animation: debuffPulse 0.6s infinite alternate;
+}
+
+.debuff-indicator.hidden {
+  display: none !important;
+}
+
+@keyframes debuffPulse {
+  0% { transform: scale(0.95); opacity: 0.85; }
+  100% { transform: scale(1.05); opacity: 1; }
+}
+
+/* Chase Mode Selection Panel & Cards Grid */
+.chase-panel {
+  max-width: 680px;
+}
+
+.chase-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 8px 0 12px 0;
+  width: 100%;
+}
+
+.chase-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  padding: 8px 4px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-height: 105px;
+}
+
+.chase-card:active {
+  transform: scale(0.95);
+}
+
+.chase-card.selected {
+  background: linear-gradient(135deg, rgba(255, 0, 68, 0.25) 0%, rgba(170, 0, 255, 0.3) 100%);
+  border-color: var(--secondary-color);
+  box-shadow: 0 0 18px rgba(255, 204, 0, 0.5), inset 0 0 10px rgba(255, 204, 0, 0.2);
+}
+
+.chase-card-img {
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  margin-bottom: 4px;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.6));
+  transition: transform 0.2s ease;
+}
+
+.chase-card.selected .chase-card-img {
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 10px var(--secondary-color));
+}
+
+.chase-card-title {
+  font-size: 0.88rem;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 2px;
+}
+
+.chase-card-desc {
+  font-size: 0.68rem;
+  color: #ddd;
+  line-height: 1.2;
+}
+
 .powerup-bar-fill {
   height: 100%;
   background: var(--accent-green);

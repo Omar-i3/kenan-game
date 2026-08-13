@@ -113,6 +113,12 @@
         </div>
       </div>
 
+      <!-- Monster Debuff Status HUD Indicator -->
+      <div id="debuff-indicator" class="debuff-indicator hidden">
+        <span id="debuff-icon" class="debuff-icon">🪄</span>
+        <span id="debuff-text" class="debuff-text">متباطئ!</span>
+      </div>
+
       <!-- Slipper Drop Alert HUD Banner -->
       <div id="slipper-alert-banner" class="slipper-alert-banner hidden">
         <img src="./assets/item_slipper.png" class="slipper-banner-img" alt="زنوبة" />
@@ -134,10 +140,13 @@
         <!-- Mode Select Buttons -->
         <div class="mode-select-group">
           <button id="mode-endless-btn" class="mode-btn active">
-            <span>🏃 طور الصمود (Endless)</span>
+            <span>🏃 طور الصمود</span>
+          </button>
+          <button id="mode-chase-btn" class="mode-btn">
+            <span>⚔️ طور المطاردة</span>
           </button>
           <button id="mode-story-btn" class="mode-btn">
-            <span>📖 طور القصة (10 مراحل)</span>
+            <span>📖 طور القصة</span>
           </button>
         </div>
 
@@ -175,6 +184,65 @@
         </div>
 
         <button id="audio-toggle-btn" class="btn-secondary" style="margin-top: 10px;">🔊 الصوت: مفعّل</button>
+      </div>
+    </div>
+
+    <!-- Chase Mode Selection Screen Modal Overlay -->
+    <div id="chase-mode-screen" class="screen-overlay hidden">
+      <div class="glass-panel chase-panel">
+        <h2 class="game-title" style="font-size: 1.7rem; color: var(--secondary-color);">⚔️ طور المطاردة (Chase Mode)</h2>
+        <p class="game-subtitle" style="margin-bottom: 6px;">اختر مطاردك الفردي أو حدد عدة وحوش لهجوم شامل!</p>
+
+        <!-- Chase Mode Type Selector -->
+        <div class="mode-select-group" style="margin-bottom: 8px;">
+          <button id="chase-mode-single-btn" class="mode-btn active">
+            <span>👤 مطارد فردي</span>
+          </button>
+          <button id="chase-mode-group-btn" class="mode-btn">
+            <span>👥 هجوم شامل</span>
+          </button>
+        </div>
+
+        <div class="high-score-badge" style="margin-bottom: 8px;">
+          👑 أعلى صمود بالمطاردة: <span id="chase-high-score-val">0.0</span> ثانية
+        </div>
+
+        <!-- 4 Monster Selection Cards Grid -->
+        <div class="chase-cards-grid">
+          <!-- Card 1: Kenan -->
+          <div class="chase-card selected" data-monster="kenan">
+            <input type="checkbox" id="chk-kenan" class="chase-chk" checked hidden />
+            <img src="./kenan.png" class="chase-card-img" alt="كنان" />
+            <div class="chase-card-title">👹 كنان</div>
+            <div class="chase-card-desc">رمي الزنوبة والسرعة 👡</div>
+          </div>
+          <!-- Card 2: Aseel -->
+          <div class="chase-card" data-monster="aseel">
+            <input type="checkbox" id="chk-aseel" class="chase-chk" hidden />
+            <img src="./assets/aseel.png" class="chase-card-img" alt="أسيل" />
+            <div class="chase-card-title">🪄 أسيل</div>
+            <div class="chase-card-desc">العصا السحرية (تبطيء) 🪄</div>
+          </div>
+          <!-- Card 3: Elias -->
+          <div class="chase-card" data-monster="elias">
+            <input type="checkbox" id="chk-elias" class="chase-chk" hidden />
+            <img src="./assets/elias.png" class="chase-card-img" alt="إلياس" />
+            <div class="chase-card-title">🎮 إلياس</div>
+            <div class="chase-card-desc">الكنترولر (تجميد التحكم) 🎮</div>
+          </div>
+          <!-- Card 4: Qamar -->
+          <div class="chase-card" data-monster="qamar">
+            <input type="checkbox" id="chk-qamar" class="chase-chk" hidden />
+            <img src="./assets/qamar.png" class="chase-card-img" alt="قمر" />
+            <div class="chase-card-title">👑 قمر</div>
+            <div class="chase-card-desc">تاج الأميرة (عكس الاتجاهات) 👑</div>
+          </div>
+        </div>
+
+        <button id="start-chase-btn" class="btn-primary" style="background: linear-gradient(135deg, #ff0044 0%, #aa00ff 100%); margin-top: 8px;">
+          🔥 ابدأ المطاردة
+        </button>
+        <button id="close-chase-btn" class="btn-secondary" style="margin-top: 6px;">🔙 العودة للقائمة الرئيسية</button>
       </div>
     </div>
 
