@@ -184,28 +184,38 @@ class AudioManager {
   }
 
   // ─── Chase Music (looping background) ───
-  startChase() {
+  startChase(monsterType = 'kenan') {
     if (this.isMuted) return;
     this.unlockAudio();
     this.isPlayingChase = true;
+    this.currentChaseMonster = monsterType;
 
-    if (this.chaseAudio) {
-      try {
-        this.chaseAudio.currentTime = 0;
-        this.chaseAudio.playbackRate = 1.0;
-        this.applyCurrentVolume();
-        const p = this.chaseAudio.play();
-        if (p !== undefined) {
-          p.catch(err => {
-            console.warn('[AudioManager] Chase play blocked, using synth:', err.message);
-            this.startSynthChase();
-          });
+    // Only play Kenan's 3ooo.mp3 if Kenan is in the chase!
+    if (monsterType === 'kenan' || monsterType === 'all') {
+      if (this.chaseAudio) {
+        try {
+          this.chaseAudio.currentTime = 0;
+          this.chaseAudio.playbackRate = 1.0;
+          this.applyCurrentVolume();
+          const p = this.chaseAudio.play();
+          if (p !== undefined) {
+            p.catch(err => {
+              console.warn('[AudioManager] Chase play blocked, using synth:', err.message);
+              this.startSynthChase();
+            });
+          }
+        } catch (e) {
+          this.startSynthChase();
         }
-      } catch (e) {
+      } else {
         this.startSynthChase();
       }
     } else {
-      this.startSynthChase();
+      // For other monsters (Aseel, Elias, Qamar), do not play 3ooo.mp3!
+      if (this.chaseAudio) {
+        try { this.chaseAudio.pause(); } catch (e) {}
+      }
+      this.stopSynthChase();
     }
   }
 

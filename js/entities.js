@@ -1649,14 +1649,28 @@ class ChaseMonster {
 
     this.configureMonster();
 
-    this.memeTimer = Math.random() * 3.0;
+    this.memeTimer = Math.random() * 2.0;
     this.memeInterval = 4.0;
-    this.currentQuote = this.quotes[0] || "";
+    this.currentQuote = "";
+    this.speechDisplayTimer = 0;
+    this.proximityTriggerCooldown = 0;
     this.freezeTimer = 0;
   }
 
   freeze(duration = 3.0) {
     this.freezeTimer = duration;
+  }
+
+  triggerQuote(specificIndex = null) {
+    if (!this.voiceQuoteMap || this.voiceQuoteMap.length === 0) return;
+    const chosen = specificIndex !== null
+      ? this.voiceQuoteMap[specificIndex % this.voiceQuoteMap.length]
+      : this.voiceQuoteMap[Math.floor(Math.random() * this.voiceQuoteMap.length)];
+    this.currentQuote = chosen.text;
+    this.speechDisplayTimer = 3.5;
+    if (window.audioManager) {
+      window.audioManager.playVoice(chosen.voice);
+    }
   }
 
   configureMonster() {
@@ -1666,7 +1680,12 @@ class ChaseMonster {
       this.turnRate = 0.14;
       this.themeColor = '#aa00ff';
       this.img = ASSET_IMAGES['aseel'];
-      this.quotes = ["العصا السحرية جاياك!", "رح أبطئ حركتك!", "وقفي مكانك!"];
+      this.voiceQuoteMap = [
+        { voice: 'aseel_1', text: 'وين رايح؟ أنا وراك' },
+        { voice: 'aseel_2', text: 'العصا السحرية جاياك!' },
+        { voice: 'aseel_3', text: 'رح أبطئ حركتك!' }
+      ];
+      this.quotes = this.voiceQuoteMap.map(q => q.text);
       this.toolType = 'wand';
     } else if (this.type === 'elias') {
       this.name = 'إلياس';
@@ -1674,7 +1693,12 @@ class ChaseMonster {
       this.turnRate = 0.16;
       this.themeColor = '#00f0ff';
       this.img = ASSET_IMAGES['elias'];
-      this.quotes = ["الكنترولر معطل!", "جمّدت تحكمك!", "ما رح تقدر تتحرك!"];
+      this.voiceQuoteMap = [
+        { voice: 'elias_1', text: 'الهروب لا يليق بمقامي' },
+        { voice: 'elias_2', text: 'جمّدت تحكمك!' },
+        { voice: 'elias_3', text: 'ما رح تقدر تتحرك!' }
+      ];
+      this.quotes = this.voiceQuoteMap.map(q => q.text);
       this.toolType = 'controller';
     } else if (this.type === 'qamar') {
       this.name = 'قمر';
@@ -1682,7 +1706,12 @@ class ChaseMonster {
       this.turnRate = 0.13;
       this.themeColor = '#ff66cc';
       this.img = ASSET_IMAGES['qamar'];
-      this.quotes = ["تاج الأميرة يعكس اتجاهك!", "وين رايح بالمقلوب؟", "احذر التاج!"];
+      this.voiceQuoteMap = [
+        { voice: 'qamar_1', text: 'بتجري مثل الدجاجة' },
+        { voice: 'qamar_2', text: 'تاج الأميرة يعكس اتجاهك!' },
+        { voice: 'qamar_3', text: 'احذر التاج!' }
+      ];
+      this.quotes = this.voiceQuoteMap.map(q => q.text);
       this.toolType = 'tiara';
     } else {
       this.name = 'وحش';
@@ -1690,6 +1719,7 @@ class ChaseMonster {
       this.turnRate = 0.12;
       this.themeColor = '#ff3366';
       this.img = null;
+      this.voiceQuoteMap = [];
       this.quotes = ["جايك!"];
       this.toolType = null;
     }
@@ -1699,18 +1729,31 @@ class ChaseMonster {
   }
 
   update(dt, playerX, playerY, arenaWidth, arenaHeight, obstacles, doors, particles) {
+    if (this.speechDisplayTimer > 0) {
+      this.speechDisplayTimer -= dt;
+    }
+    if (this.proximityTriggerCooldown > 0) {
+      this.proximityTriggerCooldown -= dt;
+    }
+
     if (this.freezeTimer > 0) {
       this.freezeTimer -= dt;
       return;
     }
 
+    // Proximity Subtitle Speech Trigger when approaching player
+    const distToPlayer = Math.hypot(playerX - this.x, playerY - this.y);
+    if (distToPlayer < 650 && this.proximityTriggerCooldown <= 0 && this.speechDisplayTimer <= 0) {
+      this.proximityTriggerCooldown = 7.0;
+      this.triggerQuote();
+    }
+
     this.memeTimer += dt;
     if (this.memeTimer >= this.memeInterval) {
       this.memeTimer = 0;
-      this.memeInterval = 4.5 + Math.random() * 3.0;
-      this.currentQuote = this.quotes[Math.floor(Math.random() * this.quotes.length)];
-      if (window.audioManager) {
-        window.audioManager.playMonsterVoice(this.type);
+      this.memeInterval = 5.0 + Math.random() * 3.0;
+      if (this.speechDisplayTimer <= 0) {
+        this.triggerQuote();
       }
     }
 
@@ -1755,19 +1798,22 @@ class ChaseMonster {
     ctx.save();
     ctx.translate(this.x, this.y);
 
-    ctx.shadowColor = this.themeColor;
-    ctx.shadowBlur = 24;
-
-    ctx.beginPath();
-    ctx.arc(0, 0, this.radius + 10, 0, Math.PI * 2);
-    ctx.fillStyle = this.themeColor + '44';
-    ctx.fill();
+    // Freeze visual indicator (icy blue aura only when frozen)
+    if (this.freezeTimer > 0) {
+      ctx.shadowColor = '#00f0ff';
+      ctx.shadowBlur = 25;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius + 12, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0, 200, 255, 0.35)';
+      ctx.fill();
+    }
 
     ctx.rotate(this.angle);
 
     const imgSize = this.radius * 2.7;
-    if (this.img && this.img.complete && this.img.naturalWidth > 0) {
-      ctx.drawImage(this.img, -imgSize / 2, -imgSize / 2, imgSize, imgSize);
+    const img = this.img || ASSET_IMAGES[this.type];
+    if (img && (img.naturalWidth > 0 || img.complete)) {
+      ctx.drawImage(img, -imgSize / 2, -imgSize / 2, imgSize, imgSize);
     } else {
       ctx.fillStyle = this.themeColor;
       ctx.beginPath();
@@ -1775,41 +1821,54 @@ class ChaseMonster {
       ctx.fill();
 
       ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(14, 0, 10, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.font = 'bold 20px Cairo, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(this.name, 0, 0);
     }
 
     ctx.restore();
-    this.drawSpeechBubble(ctx);
+
+    if (this.speechDisplayTimer > 0 && this.currentQuote) {
+      this.drawSpeechBubble(ctx);
+    }
   }
 
   drawSpeechBubble(ctx) {
-    const text = this.currentQuote || "جايك!";
+    const text = `💬 ${this.name}: "${this.currentQuote}"`;
     ctx.save();
-    ctx.font = 'bold 15px Tajawal, sans-serif';
+    ctx.font = 'bold 15px Cairo, Tajawal, sans-serif';
 
-    const padding = 12;
+    const padding = 14;
     const textWidth = ctx.measureText(text).width;
-    const boxWidth = textWidth + padding * 2;
-    const boxHeight = 30;
+    const boxWidth = Math.max(textWidth + padding * 2, 140);
+    const boxHeight = 36;
     const boxX = this.x - boxWidth / 2;
-    const boxY = this.y - this.radius - 50;
+    const boxY = this.y - this.radius - 55;
 
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = 'rgba(0,0,0,0.6)';
-    ctx.shadowBlur = 10;
+    // Outer dark bubble with glowing accent border
+    ctx.shadowColor = this.themeColor || 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 12;
+    ctx.fillStyle = 'rgba(15, 12, 32, 0.95)';
+    ctx.strokeStyle = this.themeColor || '#00f0ff';
+    ctx.lineWidth = 2.5;
+
     ctx.beginPath();
     ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 10);
     ctx.fill();
+    ctx.stroke();
 
+    // Triangle arrow pointer
+    ctx.fillStyle = 'rgba(15, 12, 32, 0.95)';
     ctx.beginPath();
-    ctx.moveTo(this.x - 6, boxY + boxHeight);
+    ctx.moveTo(this.x - 7, boxY + boxHeight);
     ctx.lineTo(this.x, boxY + boxHeight + 8);
-    ctx.lineTo(this.x + 6, boxY + boxHeight);
+    ctx.lineTo(this.x + 7, boxY + boxHeight);
     ctx.fill();
 
-    ctx.fillStyle = '#000000';
+    // Text with crisp color
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(text, this.x, boxY + boxHeight / 2);

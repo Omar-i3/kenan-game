@@ -114,9 +114,9 @@ class Game {
       window.audioManager.unlockAudio();
       try {
         if (screen.orientation && screen.orientation.lock) {
-          screen.orientation.lock('landscape').catch(() => {});
+          screen.orientation.lock('landscape').catch(() => { });
         }
-      } catch (e) {}
+      } catch (e) { }
     };
     window.addEventListener('touchstart', lockLandscape, { passive: true });
     window.addEventListener('pointerdown', lockLandscape, { passive: true });
@@ -321,6 +321,8 @@ class Game {
       document.getElementById('game-over-screen').classList.add('hidden');
       if (this.gameMode === 'STORY') {
         this.startStoryStage(this.currentStageId);
+      } else if (this.gameMode === 'CHASE') {
+        this.startChaseGame();
       } else {
         this.startEndlessGame();
       }
@@ -454,7 +456,7 @@ class Game {
         const isUnlocked = stg.id <= this.unlockedStage;
 
         card.className = `stage-card ${isUnlocked ? 'unlocked' : 'locked'} ${stg.isBossFight ? 'boss-card' : ''}`;
-        
+
         card.innerHTML = `
           <div class="stage-num">${stg.isBossFight ? '👹 BOSS' : `المرحلة ${stg.id}`}</div>
           <div class="stage-title">${stg.name.split(':')[1] || stg.name}</div>
@@ -491,7 +493,7 @@ class Game {
 
   throwSlipper() {
     if (this.state !== 'PLAYING' || !this.player || !this.kenan) return;
-    
+
     // Check if player has slippers or is in Boss Fight
     if (!this.kenan.isBoss && this.player.slippers <= 0) return;
 
@@ -505,7 +507,7 @@ class Game {
       this.player.x, this.player.y,
       this.kenan.x, this.kenan.y
     ));
-    
+
     window.soundEffectsManager.playDashSound();
     window.hapticsManager.triggerTac();
   }
@@ -566,7 +568,7 @@ class Game {
     document.getElementById('powerup-indicator').classList.add('hidden');
     document.getElementById('hud-objective-banner').classList.add('hidden');
     document.getElementById('boss-health-container').classList.add('hidden');
-    
+
     const debuffInd = document.getElementById('debuff-indicator');
     if (debuffInd) debuffInd.classList.add('hidden');
 
@@ -622,22 +624,26 @@ class Game {
     ];
   }
 
-  startChaseGame() {
+  startChaseGame(monsters = null) {
     this.gameMode = 'CHASE';
     this.setupBaseArena();
     this.activeChaseMonsters = [];
     this.monsterToolItems = [];
     this.monsterToolSpawnTimer = 0;
 
-    // Collect checked monsters from chase screen
-    const selectedKeys = [];
-    const chks = document.querySelectorAll('.chase-chk:checked');
-    chks.forEach(chk => {
-      const card = chk.closest('.chase-card');
-      if (card && card.dataset.monster) {
-        selectedKeys.push(card.dataset.monster);
-      }
-    });
+    // Collect checked monsters from parameter or chase screen checkboxes
+    let selectedKeys = [];
+    if (monsters && Array.isArray(monsters) && monsters.length > 0) {
+      selectedKeys = [...monsters];
+    } else {
+      const chks = document.querySelectorAll('.chase-chk:checked');
+      chks.forEach(chk => {
+        const card = chk.closest('.chase-card');
+        if (card && card.dataset.monster) {
+          selectedKeys.push(card.dataset.monster);
+        }
+      });
+    }
 
     if (selectedKeys.length === 0) selectedKeys.push('kenan');
     this.chaseSelectedMonsters = selectedKeys;
@@ -678,7 +684,8 @@ class Game {
     document.getElementById('victory-screen').classList.add('hidden');
     document.getElementById('hud-layer').classList.remove('hidden');
 
-    window.audioManager.startChase();
+    const chaseAudioMonster = selectedKeys.includes('kenan') ? 'kenan' : (selectedKeys.length === 1 ? selectedKeys[0] : 'other');
+    window.audioManager.startChase(chaseAudioMonster);
   }
 
   startEndlessGame() {
@@ -694,7 +701,7 @@ class Game {
     document.getElementById('victory-screen').classList.add('hidden');
     document.getElementById('hud-layer').classList.remove('hidden');
 
-    window.audioManager.startChase();
+    window.audioManager.startChase('kenan');
   }
 
   startStoryStage(stageId) {
@@ -787,13 +794,47 @@ class Game {
       }
     }
 
-    // Spawn Ground Collectible Slippers
-    if (stageData.hasSlippers || stageId >= 5) {
-      const count = stageData.isBossFight ? 5 : 2;
+    // Spawn Chapter-Specific Tools (Bug 8 Fix)
+    // Chapter 1 (Kenan): Slippers 👡
+    if (stageData.chapter === 1 || stageData.hasSlippers || stageId === 21) {
+      const count = stageData.isBossFight ? 5 : 3;
       for (let i = 0; i < count; i++) {
         this.collectibleSlippers.push(new window.Entities.CollectibleSlipper(
           150 + Math.random() * (this.arenaWidth - 300),
           150 + Math.random() * (this.arenaHeight - 300)
+        ));
+      }
+    }
+
+    // Chapter 2 (Aseel): Wand 🪄
+    if (stageData.chapter === 2 || stageId === 21) {
+      for (let i = 0; i < 3; i++) {
+        this.monsterToolItems.push(new window.Entities.MonsterToolItem(
+          200 + Math.random() * (this.arenaWidth - 400),
+          200 + Math.random() * (this.arenaHeight - 400),
+          'wand'
+        ));
+      }
+    }
+
+    // Chapter 3 (Elias): Controller 🎮
+    if (stageData.chapter === 3 || stageId === 21) {
+      for (let i = 0; i < 3; i++) {
+        this.monsterToolItems.push(new window.Entities.MonsterToolItem(
+          200 + Math.random() * (this.arenaWidth - 400),
+          200 + Math.random() * (this.arenaHeight - 400),
+          'controller'
+        ));
+      }
+    }
+
+    // Chapter 4 (Qamar): Tiara 👑
+    if (stageData.chapter === 4 || stageId === 21) {
+      for (let i = 0; i < 3; i++) {
+        this.monsterToolItems.push(new window.Entities.MonsterToolItem(
+          200 + Math.random() * (this.arenaWidth - 400),
+          200 + Math.random() * (this.arenaHeight - 400),
+          'tiara'
         ));
       }
     }
@@ -823,7 +864,8 @@ class Game {
     document.getElementById('victory-screen').classList.add('hidden');
     document.getElementById('hud-layer').classList.remove('hidden');
 
-    window.audioManager.startChase();
+    const chaseAudioMonster = (stageData.isGrandFinal || stageId === 21) ? 'all' : mType;
+    window.audioManager.startChase(chaseAudioMonster);
   }
 
   updateBossHpBar() {
@@ -877,18 +919,56 @@ class Game {
     return '👑⚡ لقب: "أسطورة الهروب"';
   }
 
-  gameOver() {
+  gameOver(caughtByMonster = null) {
     this.state = 'GAMEOVER';
 
-    // Kenan Catch Voice Clips & Funny Dialogue Mapping
-    const catchSpeechOptions = [
-      { voice: 'voice_akaltak', text: '💬 كنان: "أكلتك خلاص! 😂"' },
-      { voice: 'voice_sadtak',  text: '💬 كنان: "صدتك ما فيه مفر! 👹"' },
-      { voice: 'voice_warak',   text: '💬 كنان: "وراك وراك حتى لو ركضت! 🏃💨"' },
-      { voice: 'voice_jayak',   text: '💬 كنان: "جايك جايك وأخذتك! 💥"' },
-      { voice: 'voice_mafer',   text: '💬 كنان: "ما فيه مفر مني اليوم! 😈"' }
-    ];
+    // Determine which monster caught the player
+    const caughtType = caughtByMonster ? (caughtByMonster.type || 'kenan') : 'kenan';
+    const caughtName = caughtByMonster ? (caughtByMonster.name || 'كنان') : 'كنان';
+
+    // Monster-specific catch speech options
+    let catchSpeechOptions;
+    if (caughtType === 'aseel') {
+      catchSpeechOptions = [
+        { voice: 'aseel_1', text: `💬 أسيل: "وين رايح؟ أنا وراك! 🪄"` },
+        { voice: 'aseel_2', text: `💬 أسيل: "العصا السحرية جاياك! 🪄"` },
+        { voice: 'aseel_3', text: `💬 أسيل: "صدتك بالسحر! ✨"` }
+      ];
+    } else if (caughtType === 'elias') {
+      catchSpeechOptions = [
+        { voice: 'elias_1', text: `💬 إلياس: "الهروب لا يليق بمقامي! 🎮"` },
+        { voice: 'elias_2', text: `💬 إلياس: "جمّدتك خلاص! 🎮"` },
+        { voice: 'elias_3', text: `💬 إلياس: "ما رح تقدر تتحرك! 🎮"` }
+      ];
+    } else if (caughtType === 'qamar') {
+      catchSpeechOptions = [
+        { voice: 'qamar_1', text: `💬 قمر: "بتجري مثل الدجاجة! 👑"` },
+        { voice: 'qamar_2', text: `💬 قمر: "تاج الأميرة صادك! 👑"` },
+        { voice: 'qamar_3', text: `💬 قمر: "احذر التاج! 👑"` }
+      ];
+    } else {
+      catchSpeechOptions = [
+        { voice: 'voice_akaltak', text: '💬 كنان: "أكلتك خلاص! 😂"' },
+        { voice: 'voice_sadtak', text: '💬 كنان: "صدتك ما فيه مفر! 👹"' },
+        { voice: 'voice_warak', text: '💬 كنان: "وراك وراك حتى لو ركضت! 🏃💨"' },
+        { voice: 'voice_jayak', text: '💬 كنان: "جايك جايك وأخذتك! 💥"' },
+        { voice: 'voice_mafer', text: '💬 كنان: "ما فيه مفر مني اليوم! 😈"' }
+      ];
+    }
     const chosenCatch = catchSpeechOptions[Math.floor(Math.random() * catchSpeechOptions.length)];
+
+    // Update jumpscare image to the monster that caught the player
+    const jumpscareImg = document.querySelector('#jumpscare-overlay .jumpscare-img');
+    if (jumpscareImg) {
+      if (caughtType === 'aseel') jumpscareImg.src = './assets/aseel.png';
+      else if (caughtType === 'elias') jumpscareImg.src = './assets/elias.png';
+      else if (caughtType === 'qamar') jumpscareImg.src = './assets/qamar.png';
+      else jumpscareImg.src = './kenan.png';
+    }
+
+    // Update jumpscare text
+    const jumpscareText = document.querySelector('#jumpscare-overlay .jumpscare-text');
+    if (jumpscareText) jumpscareText.innerText = `صادك ${caughtName}! 😱💥`;
 
     // Show caught speech text on jumpscare screen
     const speechEl = document.getElementById('jumpscare-speech');
@@ -904,6 +984,10 @@ class Game {
 
     const jumpscare = document.getElementById('jumpscare-overlay');
     if (jumpscare) jumpscare.classList.remove('hidden');
+
+    // Update game over screen title to show who caught the player
+    const goTitle = document.querySelector('#game-over-screen .game-title');
+    if (goTitle) goTitle.innerHTML = `صادك ${caughtName}! 😱`;
 
     const container = document.getElementById('game-container');
     container.classList.add('shake-screen');
@@ -1159,6 +1243,27 @@ class Game {
       }
     }
 
+    // Periodically spawn Chapter Tools during Story Mode (Bug 8 Fix)
+    if (this.gameMode === 'STORY') {
+      const stageData = window.Entities.STORY_STAGES.find(s => s.id === this.currentStageId);
+      if (stageData) {
+        this.monsterToolSpawnTimer += dt;
+        if (this.monsterToolSpawnTimer >= 10.0 && this.monsterToolItems.length < 6) {
+          this.monsterToolSpawnTimer = 0;
+          const padding = 250;
+          const tx = padding + Math.random() * (this.arenaWidth - padding * 2);
+          const ty = padding + Math.random() * (this.arenaHeight - padding * 2);
+          if (stageData.chapter === 2) {
+            this.monsterToolItems.push(new window.Entities.MonsterToolItem(tx, ty, 'wand'));
+          } else if (stageData.chapter === 3) {
+            this.monsterToolItems.push(new window.Entities.MonsterToolItem(tx, ty, 'controller'));
+          } else if (stageData.chapter === 4) {
+            this.monsterToolItems.push(new window.Entities.MonsterToolItem(tx, ty, 'tiara'));
+          }
+        }
+      }
+    }
+
     // Collisions: Player vs Monster Tool Items
     for (let i = this.monsterToolItems.length - 1; i >= 0; i--) {
       const item = this.monsterToolItems[i];
@@ -1200,7 +1305,7 @@ class Game {
               ));
             }
           } else if (this.player.shieldInvulnerableTimer <= 0) {
-            this.gameOver();
+            this.gameOver(m);
             return;
           }
         }
@@ -1261,7 +1366,7 @@ class Game {
           ));
         }
       } else if (this.player.shieldInvulnerableTimer <= 0) {
-        this.gameOver();
+        this.gameOver(this.kenan);
         return;
       }
     }
@@ -1273,7 +1378,7 @@ class Game {
         const dist = Math.hypot(this.kenan.x - slp.x, this.kenan.y - slp.y);
         if (dist < (this.kenan.radius + slp.radius)) {
           this.slippers.splice(i, 1);
-          
+
           for (let k = 0; k < 12; k++) {
             this.particles.push(new window.Entities.Particle(
               this.kenan.x, this.kenan.y,
@@ -1361,7 +1466,7 @@ class Game {
           if (dist < (this.player.radius + item.radius)) {
             item.isCollected = true;
             this.stageItemsCollected++;
-            
+
             document.getElementById('objective-count-badge').innerText = `${this.stageItemsCollected}/${this.stageItemsTotal}`;
             window.hapticsManager.triggerTac();
 
@@ -1394,14 +1499,37 @@ class Game {
       }
     }
 
-    // Collisions: Kenan vs Banana Traps
-    this.bananaTraps.forEach((trap, idx) => {
-      const dist = Math.hypot(this.kenan.x - trap.x, this.kenan.y - trap.y);
-      if (dist < (this.kenan.radius + trap.radius)) {
-        this.kenan.slipOnBanana();
+    // Collisions: Monsters vs Banana Traps (all active monsters)
+    for (let idx = this.bananaTraps.length - 1; idx >= 0; idx--) {
+      const trap = this.bananaTraps[idx];
+      let consumed = false;
+
+      // Check kenan
+      if (this.kenan) {
+        const dist = Math.hypot(this.kenan.x - trap.x, this.kenan.y - trap.y);
+        if (dist < (this.kenan.radius + trap.radius)) {
+          this.kenan.slipOnBanana();
+          consumed = true;
+        }
+      }
+
+      // Check chase monsters
+      if (!consumed) {
+        for (const m of this.activeChaseMonsters) {
+          const dist = Math.hypot(m.x - trap.x, m.y - trap.y);
+          if (dist < (m.radius + trap.radius)) {
+            m.freeze(3.0);
+            window.soundEffectsManager.playBananaSlipSound();
+            consumed = true;
+            break;
+          }
+        }
+      }
+
+      if (consumed) {
         this.bananaTraps.splice(idx, 1);
       }
-    });
+    }
 
     // Collisions: Player vs Speed Boost Pads
     this.speedPads.forEach(pad => {

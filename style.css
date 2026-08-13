@@ -406,7 +406,7 @@ button * {
 /* HUD Top Objective Banner */
 .hud-objective-banner {
   position: absolute;
-  top: 14px;
+  top: 60px;
   left: 50%;
   transform: translateX(-50%);
   background: rgba(15, 12, 32, 0.88);
@@ -438,7 +438,7 @@ button * {
   border-radius: 10px;
 }
 
-/* Giant Kenan Boss Health Bar HUD */
+/* Giant Boss Health Bar HUD (Bug 9 Fix: top: 10px; z-index: 100) */
 .boss-health-container {
   position: absolute;
   top: 10px;
@@ -450,13 +450,13 @@ button * {
   border: 2px solid var(--danger-color);
   box-shadow: 0 0 20px rgba(255, 0, 68, 0.5);
   border-radius: 14px;
-  padding: 6px 12px;
+  padding: 5px 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 3px;
   backdrop-filter: blur(6px);
-  z-index: 8;
+  z-index: 100;
 }
 
 .boss-health-container.hidden {
