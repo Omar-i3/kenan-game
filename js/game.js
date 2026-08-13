@@ -582,6 +582,7 @@ class Game {
     // Slipper Spawn State for Endless Survival Mode
     this.slipperSpawnTriggered = false;
     this.slipperSpawnTimer = 0;
+    this.chaseRageTriggered = false;
 
     this.powerUpSpawnTimer = 0;
     this.nextPowerUpDelay = 10 + Math.random() * 5;
@@ -950,7 +951,16 @@ class Game {
     const caughtType = caughtByMonster ? (caughtByMonster.type || 'kenan') : 'kenan';
     const caughtName = caughtByMonster ? (caughtByMonster.name || 'كنان') : 'كنان';
 
-    // Monster-specific catch speech options
+    // 1. Immediately update jumpscare image source BEFORE displaying overlay (Zero-flicker fix!)
+    const jumpscareImg = document.querySelector('#jumpscare-overlay .jumpscare-img');
+    if (jumpscareImg) {
+      if (caughtType === 'aseel') jumpscareImg.src = './assets/aseel.png';
+      else if (caughtType === 'elias') jumpscareImg.src = './assets/elias.png';
+      else if (caughtType === 'qamar') jumpscareImg.src = './assets/qamar.png';
+      else jumpscareImg.src = './kenan.png';
+    }
+
+    // 2. Monster-specific catch speech options
     let catchSpeechOptions;
     if (caughtType === 'aseel') {
       catchSpeechOptions = [
@@ -981,37 +991,27 @@ class Game {
     }
     const chosenCatch = catchSpeechOptions[Math.floor(Math.random() * catchSpeechOptions.length)];
 
-    // Update jumpscare image to the monster that caught the player
-    const jumpscareImg = document.querySelector('#jumpscare-overlay .jumpscare-img');
-    if (jumpscareImg) {
-      if (caughtType === 'aseel') jumpscareImg.src = './assets/aseel.png';
-      else if (caughtType === 'elias') jumpscareImg.src = './assets/elias.png';
-      else if (caughtType === 'qamar') jumpscareImg.src = './assets/qamar.png';
-      else jumpscareImg.src = './kenan.png';
-    }
-
-    // Update jumpscare text
+    // 3. Update jumpscare text and dialogue
     const jumpscareText = document.querySelector('#jumpscare-overlay .jumpscare-text');
     if (jumpscareText) jumpscareText.innerText = `صادك ${caughtName}! 😱💥`;
 
-    // Show caught speech text on jumpscare screen
     const speechEl = document.getElementById('jumpscare-speech');
     if (speechEl) {
       speechEl.innerText = chosenCatch.text;
       speechEl.classList.remove('hidden');
     }
 
-    // Play catch audio voice clip clearly
+    // 4. Update Game Over screen title
+    const goTitle = document.querySelector('#game-over-screen .game-title');
+    if (goTitle) goTitle.innerHTML = `صادك ${caughtName}! 😱`;
+
+    // 5. Play audio and reveal overlay
     window.audioManager.stopChase();
     window.audioManager.playVoice(chosenCatch.voice);
     window.hapticsManager.triggerJumpscare();
 
     const jumpscare = document.getElementById('jumpscare-overlay');
     if (jumpscare) jumpscare.classList.remove('hidden');
-
-    // Update game over screen title to show who caught the player
-    const goTitle = document.querySelector('#game-over-screen .game-title');
-    if (goTitle) goTitle.innerHTML = `صادك ${caughtName}! 😱`;
 
     const container = document.getElementById('game-container');
     container.classList.add('shake-screen');
@@ -1655,6 +1655,29 @@ class Game {
         this.powerUps.splice(idx, 1);
       }
     });
+
+    // Chase Mode 30-Second Rage Trigger (+25% Speed & Alert Banner)
+    if (this.gameMode === 'CHASE' && this.score >= 30.0 && !this.chaseRageTriggered) {
+      this.chaseRageTriggered = true;
+      if (this.kenan) {
+        this.kenan.setRageMode(true);
+        this.kenan.baseSpeed *= 1.25;
+      }
+      this.activeChaseMonsters.forEach(m => {
+        m.baseSpeed *= 1.25;
+      });
+
+      const rageBanner = document.getElementById('rage-banner');
+      if (rageBanner) {
+        rageBanner.innerText = "🔥 الوحوش أصبحت أسرع وأغضب!";
+        rageBanner.classList.remove('hidden');
+        setTimeout(() => {
+          if (rageBanner) rageBanner.classList.add('hidden');
+        }, 4000);
+      }
+      window.soundEffectsManager.playPanicVoice();
+      window.hapticsManager.triggerImpact();
+    }
 
     // Stage 21 60-Second Survival Objective Counter
     if (this.gameMode === 'STORY' && this.currentStageId === 21) {

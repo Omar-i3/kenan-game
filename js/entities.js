@@ -339,15 +339,16 @@ class KenanMonster {
     this.bossHp = 100;
     this.maxBossHp = 100;
     this.freezeTimer = 0;
-    this.slipTimer = 0; // Banana Slip 2.0s duration
+    this.slipTimer = 0; // Banana Slip 3.0s duration
     this.teleportCooldown = 35.0; // Teleport Jump every 35s
 
-    // Tool Cooldown & Rage Scaling System
+    // Tool Cooldown & Slipper Throwing Skill (every 8-12s)
     this.toolType = 'slipper';
     this.itemCooldown = 5.0;
     this.itemCooldownMax = 10.0;
     this.canUseItem = false;
     this.attackCount = 0;
+    this.slipperThrowTimer = 4.0 + Math.random() * 4.0;
 
     // Difficulty Settings
     this.configureDifficulty();
@@ -420,7 +421,9 @@ class KenanMonster {
   }
 
   slipOnBanana() {
-    this.slipTimer = 2.0; // Spin & slip for 2.0s
+    this.slipTimer = 3.0; // Spin & slip for 3.0s
+    this.freezeTimer = 3.0;
+    this.isStunned = true;
     window.soundEffectsManager.playBananaSlipSound();
   }
 
@@ -430,6 +433,17 @@ class KenanMonster {
       this.itemCooldown -= dt;
       if (this.itemCooldown <= 0) {
         this.canUseItem = true;
+      }
+    }
+
+    // Periodic Slipper Throwing Skill (every 8 to 12s)
+    this.slipperThrowTimer -= dt;
+    if (this.slipperThrowTimer <= 0) {
+      this.slipperThrowTimer = 8.0 + Math.random() * 4.0;
+      if (window.game && window.game.monsterProjectiles) {
+        window.game.monsterProjectiles.push(new MonsterProjectile(this.x, this.y, playerX, playerY, 'slipper'));
+        if (window.soundEffectsManager) window.soundEffectsManager.playDashSound();
+        if (window.audioManager) window.audioManager.playVoice('voice_warak');
       }
     }
     // Handle Banana Slip
@@ -1864,10 +1878,19 @@ class ChaseMonster {
   }
 
   configureMonster() {
+    this.baseSpeed = 250;
+    this.turnRate = 0.12;
+
+    if (this.difficulty === 'easy') {
+      this.baseSpeed = 200;
+      this.turnRate = 0.05;
+    } else if (this.difficulty === 'hard') {
+      this.baseSpeed = 310;
+      this.turnRate = 0.25;
+    }
+
     if (this.type === 'aseel') {
       this.name = 'أسيل';
-      this.baseSpeed = 265;
-      this.turnRate = 0.14;
       this.themeColor = '#aa00ff';
       this.img = ASSET_IMAGES['aseel'];
       this.voiceQuoteMap = [
@@ -1879,8 +1902,6 @@ class ChaseMonster {
       this.toolType = 'wand';
     } else if (this.type === 'elias') {
       this.name = 'إلياس';
-      this.baseSpeed = 270;
-      this.turnRate = 0.16;
       this.themeColor = '#00f0ff';
       this.img = ASSET_IMAGES['elias'];
       this.voiceQuoteMap = [
@@ -1892,8 +1913,6 @@ class ChaseMonster {
       this.toolType = 'controller';
     } else if (this.type === 'qamar') {
       this.name = 'قمر';
-      this.baseSpeed = 260;
-      this.turnRate = 0.13;
       this.themeColor = '#ff66cc';
       this.img = ASSET_IMAGES['qamar'];
       this.voiceQuoteMap = [
@@ -1905,17 +1924,12 @@ class ChaseMonster {
       this.toolType = 'tiara';
     } else {
       this.name = 'وحش';
-      this.baseSpeed = 250;
-      this.turnRate = 0.12;
       this.themeColor = '#ff3366';
       this.img = null;
       this.voiceQuoteMap = [];
       this.quotes = ["جايك!"];
       this.toolType = null;
     }
-
-    if (this.difficulty === 'easy') this.baseSpeed *= 0.82;
-    if (this.difficulty === 'hard') this.baseSpeed *= 1.22;
   }
 
   update(dt, playerX, playerY, arenaWidth, arenaHeight, obstacles, doors, particles) {
@@ -1995,28 +2009,6 @@ class ChaseMonster {
   draw(ctx, particles, isNightMode = false) {
     ctx.save();
     ctx.translate(this.x, this.y);
-
-    // Rage/Boss Glowing Aura if attack count > 0 or isBoss
-    if (this.isBoss || this.attackCount > 0) {
-      const glowColor = this.themeColor || '#aa00ff';
-      ctx.shadowColor = glowColor;
-      ctx.shadowBlur = Math.min(15 + this.attackCount * 4, 35);
-      ctx.beginPath();
-      ctx.arc(0, 0, this.radius + 8 + Math.min(this.attackCount, 8), 0, Math.PI * 2);
-      ctx.fillStyle = glowColor + '33';
-      ctx.fill();
-    }
-
-    // Freeze visual indicator (icy blue aura only when frozen)
-    if (this.freezeTimer > 0) {
-      ctx.shadowColor = '#00f0ff';
-      ctx.shadowBlur = 25;
-      ctx.beginPath();
-      ctx.arc(0, 0, this.radius + 12, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(0, 200, 255, 0.35)';
-      ctx.fill();
-    }
-
     ctx.rotate(this.angle);
 
     const imgSize = this.radius * 2.7;
