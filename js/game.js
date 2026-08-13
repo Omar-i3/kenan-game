@@ -499,15 +499,50 @@ class Game {
     });
   }
 
+  spawnMapBananas(count = 1) {
+    for (let i = 0; i < count; i++) {
+      const margin = 200;
+      const x = margin + Math.random() * (this.arenaWidth - margin * 2);
+      const y = margin + Math.random() * (this.arenaHeight - margin * 2);
+      this.collectibleBananas.push(new window.Entities.CollectibleBanana(x, y));
+    }
+  }
+
+  showToastAlert(msg) {
+    let toast = document.getElementById('game-toast-alert');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'game-toast-alert';
+      toast.className = 'game-toast-alert';
+      const container = document.getElementById('game-container') || document.body;
+      container.appendChild(toast);
+    }
+    toast.innerText = msg;
+    toast.classList.remove('hidden');
+    toast.classList.add('visible');
+    clearTimeout(this._toastTimeout);
+    this._toastTimeout = setTimeout(() => {
+      if (toast) {
+        toast.classList.remove('visible');
+        toast.classList.add('hidden');
+      }
+    }, 2000);
+  }
+
   dropBananaTrap() {
     if (this.state !== 'PLAYING' || !this.player) return;
-    if (this.player.bananaTraps > 0) {
-      this.player.bananaTraps--;
-      document.getElementById('banana-count').innerText = this.player.bananaTraps;
+    const count = this.player.bananaCount !== undefined ? this.player.bananaCount : this.player.bananaTraps;
+    if (count > 0) {
+      this.player.bananaCount = count - 1;
+      this.player.bananaTraps = this.player.bananaCount;
+      document.getElementById('banana-count').innerText = this.player.bananaCount;
       const dropDist = 40;
       const dropX = this.player.x - Math.cos(this.player.angle) * dropDist;
       const dropY = this.player.y - Math.sin(this.player.angle) * dropDist;
       this.bananaTraps.push(new window.Entities.BananaTrap(dropX, dropY));
+      window.hapticsManager.triggerTac();
+    } else {
+      this.showToastAlert("🍌 لا يوجد موز!");
       window.hapticsManager.triggerTac();
     }
   }
@@ -566,12 +601,15 @@ class Game {
     this.clones = [];
     this.powerUps = [];
     this.bananaTraps = [];
+    this.collectibleBananas = [];
+    this.bananaSpawnTimer = 12.0;
     this.particles = [];
     this.storyItems = [];
     this.collectibleSlippers = [];
     this.pushableCrates = [];
     this.slippers = [];
     this.activePowerUp = null;
+    this.currentKiller = null;
 
     // Chase Mode Pursuers & Tools Reset
     this.activeChaseMonsters = [];
@@ -601,9 +639,12 @@ class Game {
     const jumpscare = document.getElementById('jumpscare-overlay');
     if (jumpscare) jumpscare.classList.add('hidden');
 
-    // Spawn Player at Center of 9000x6400 Arena
+    // Spawn Player at Center of Arena
     this.player = new window.Entities.Player(this.arenaWidth / 2, this.arenaHeight / 2);
-    document.getElementById('banana-count').innerText = this.player.bananaTraps;
+    document.getElementById('banana-count').innerText = this.player.bananaCount;
+
+    // Initial Map Bananas (2-3 bananas in arena)
+    this.spawnMapBananas(3);
 
     this.updateSlipperHudBadge();
 
@@ -766,12 +807,10 @@ class Game {
       ];
     } else if (mType === 'kenan') {
       this.kenan = new window.Entities.KenanMonster(mx, my, this.difficulty);
-      this.kenan.speed *= speedMult;
       this.activeChaseMonsters = [];
     } else {
       this.kenan = null;
       const monster = new window.Entities.ChaseMonster(mType, mx, my, this.difficulty);
-      monster.baseSpeed *= speedMult;
       if (stageData.isBossFight) {
         monster.isBoss = true;
         monster.bossHp = stageData.bossHp || 50;
@@ -959,21 +998,29 @@ class Game {
   gameOver(caughtByMonster = null) {
     this.state = 'GAMEOVER';
 
-    // Determine which monster caught the player
-    const caughtType = caughtByMonster ? (caughtByMonster.type || 'kenan') : 'kenan';
-    const caughtName = caughtByMonster ? (caughtByMonster.name || 'كنان') : 'كنان';
+    // 1. Explicit killer determination
+    const killer = caughtByMonster || this.currentKiller || (this.activeChaseMonsters && this.activeChaseMonsters.length > 0 ? this.activeChaseMonsters[0] : this.kenan);
+    const caughtType = killer ? (killer.type || 'kenan') : 'kenan';
+    const caughtName = killer ? (killer.name || 'كنان') : 'كنان';
 
-    // 1. Immediately update jumpscare image source BEFORE displaying overlay (Zero-flicker fix with Cache-Busting!)
-    const withCacheBust = (p) => p + (p.includes('?') ? '&' : '?') + 't=' + Date.now();
+    let killerImgSrc = './kenan.png';
+    if (caughtType === 'aseel') killerImgSrc = './assets/aseel.png';
+    else if (caughtType === 'elias') killerImgSrc = './assets/elias.png';
+    else if (caughtType === 'qamar') killerImgSrc = './assets/qamar.png';
+
+    // 2. Pre-set jumpscare image and texts BEFORE unhiding DOM elements
     const jumpscareImg = document.querySelector('#jumpscare-overlay .jumpscare-img');
     if (jumpscareImg) {
-      if (caughtType === 'aseel') jumpscareImg.src = withCacheBust('./assets/aseel.png');
-      else if (caughtType === 'elias') jumpscareImg.src = withCacheBust('./assets/elias.png');
-      else if (caughtType === 'qamar') jumpscareImg.src = withCacheBust('./assets/qamar.png');
-      else jumpscareImg.src = withCacheBust('./kenan.png');
+      jumpscareImg.src = withCacheBust(killerImgSrc);
     }
 
-    // 2. Monster-specific catch speech options
+    const jumpscareText = document.querySelector('#jumpscare-overlay .jumpscare-text');
+    if (jumpscareText) jumpscareText.innerText = `صادك ${caughtName}! 😱💥`;
+
+    const goTitle = document.querySelector('#game-over-screen .game-title');
+    if (goTitle) goTitle.innerHTML = `صادك ${caughtName}! 😱`;
+
+    // 3. Monster-specific catch speech options
     let catchSpeechOptions;
     if (caughtType === 'aseel') {
       catchSpeechOptions = [
@@ -1004,25 +1051,18 @@ class Game {
     }
     const chosenCatch = catchSpeechOptions[Math.floor(Math.random() * catchSpeechOptions.length)];
 
-    // 3. Update jumpscare text and dialogue
-    const jumpscareText = document.querySelector('#jumpscare-overlay .jumpscare-text');
-    if (jumpscareText) jumpscareText.innerText = `صادك ${caughtName}! 😱💥`;
-
     const speechEl = document.getElementById('jumpscare-speech');
     if (speechEl) {
       speechEl.innerText = chosenCatch.text;
       speechEl.classList.remove('hidden');
     }
 
-    // 4. Update Game Over screen title
-    const goTitle = document.querySelector('#game-over-screen .game-title');
-    if (goTitle) goTitle.innerHTML = `صادك ${caughtName}! 😱`;
-
-    // 5. Play audio and reveal overlay
+    // 4. Play audio and haptics
     window.audioManager.stopChase();
     window.audioManager.playVoice(chosenCatch.voice);
     window.hapticsManager.triggerJumpscare();
 
+    // 5. Reveal jumpscare overlay
     const jumpscare = document.getElementById('jumpscare-overlay');
     if (jumpscare) jumpscare.classList.remove('hidden');
 
@@ -1394,6 +1434,7 @@ class Game {
               ));
             }
           } else if (this.player.shieldInvulnerableTimer <= 0) {
+            this.currentKiller = m;
             this.gameOver(m);
             return;
           }
@@ -1455,6 +1496,7 @@ class Game {
           ));
         }
       } else if (this.player.shieldInvulnerableTimer <= 0) {
+        this.currentKiller = this.kenan;
         this.gameOver(this.kenan);
         return;
       }
@@ -1662,12 +1704,51 @@ class Game {
           document.getElementById('powerup-icon').innerText = '❄️';
           document.getElementById('powerup-indicator').classList.remove('hidden');
         } else if (pu.type === 'banana') {
-          this.player.bananaTraps++;
-          document.getElementById('banana-count').innerText = this.player.bananaTraps;
+          this.player.bananaCount = (this.player.bananaCount !== undefined ? this.player.bananaCount : this.player.bananaTraps) + 1;
+          this.player.bananaTraps = this.player.bananaCount;
+          document.getElementById('banana-count').innerText = this.player.bananaCount;
         }
         this.powerUps.splice(idx, 1);
       }
     });
+
+    // Update Collectible Ground Bananas
+    this.collectibleBananas.forEach(cb => cb.update(dt));
+
+    // Periodic 12-Second Banana Spawn in Map
+    this.bananaSpawnTimer -= dt;
+    if (this.bananaSpawnTimer <= 0) {
+      this.bananaSpawnTimer = 12.0;
+      if (this.collectibleBananas.length < 6) {
+        this.spawnMapBananas(1);
+      }
+    }
+
+    // Collisions: Player vs Collectible Ground Bananas
+    for (let idx = this.collectibleBananas.length - 1; idx >= 0; idx--) {
+      const b = this.collectibleBananas[idx];
+      if (!b.isCollected && this.player) {
+        const dist = Math.hypot(this.player.x - b.x, this.player.y - b.y);
+        if (dist < (this.player.radius + b.radius)) {
+          b.isCollected = true;
+          this.player.bananaCount = (this.player.bananaCount !== undefined ? this.player.bananaCount : this.player.bananaTraps) + 1;
+          this.player.bananaTraps = this.player.bananaCount;
+          document.getElementById('banana-count').innerText = this.player.bananaCount;
+          this.collectibleBananas.splice(idx, 1);
+
+          for (let k = 0; k < 8; k++) {
+            this.particles.push(new window.Entities.Particle(
+              b.x, b.y,
+              (Math.random() - 0.5) * 150, (Math.random() - 0.5) * 150,
+              '#ffe600', 6, 0.4
+            ));
+          }
+
+          window.soundEffectsManager.playDoorBreakSound();
+          window.hapticsManager.triggerTac();
+        }
+      }
+    }
 
     // Chase Mode 30-Second Rage Trigger (+25% Speed & Alert Banner)
     if (this.gameMode === 'CHASE' && this.score >= 30.0 && !this.chaseRageTriggered) {
@@ -1768,6 +1849,7 @@ class Game {
     this.doors.forEach(d => d.draw(this.ctx));
     this.obstacles.forEach(obs => obs.draw(this.ctx));
     this.pushableCrates.forEach(cr => cr.draw(this.ctx));
+    this.collectibleBananas.forEach(cb => cb.draw(this.ctx));
     this.bananaTraps.forEach(bt => bt.draw(this.ctx));
     this.storyItems.forEach(item => item.draw(this.ctx));
     this.collectibleSlippers.forEach(slp => slp.draw(this.ctx));

@@ -144,6 +144,7 @@ class Player {
     this.reverseControlTimer = 0;   // Qamar Tiara (Reverse controls)
 
     // Item Inventory
+    this.bananaCount = 2;
     this.bananaTraps = 2;
     this.slippers = 0;
   }
@@ -2195,6 +2196,46 @@ class MonsterToolItem {
   }
 }
 
+/**
+ * Collectible Banana Entity (Ground Pickups for replenishing banana traps)
+ */
+class CollectibleBanana {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.radius = 18;
+    this.isCollected = false;
+    this.bobTimer = Math.random() * Math.PI * 2;
+  }
+
+  update(dt) {
+    this.bobTimer += dt * 3.5;
+  }
+
+  draw(ctx) {
+    if (this.isCollected) return;
+
+    ctx.save();
+    const offsetY = Math.sin(this.bobTimer) * 5;
+    ctx.translate(this.x, this.y + offsetY);
+
+    ctx.shadowColor = '#ffe600';
+    ctx.shadowBlur = 14;
+
+    ctx.fillStyle = 'rgba(255, 230, 0, 0.25)';
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius + 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.font = '26px Cairo, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🍌', 0, 0);
+
+    ctx.restore();
+  }
+}
+
 window.Entities = {
   Particle,
   Player,
@@ -2203,6 +2244,7 @@ window.Entities = {
   ChaseMonster,
   MonsterToolItem,
   BananaTrap,
+  CollectibleBanana,
   SpeedBoostPad,
   InteractiveDoor,
   Obstacle,

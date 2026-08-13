@@ -1197,3 +1197,29 @@ button * {
   .action-buttons-group { bottom: 12px; right: 12px; gap: 12px; }
   .boss-health-container { width: 85%; top: 6px; padding: 3px 6px; }
 }
+
+/* Floating In-Game Quick Toast Notification */
+.game-toast-alert {
+  position: absolute;
+  bottom: 95px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(15, 12, 35, 0.94);
+  border: 2px solid #ffe600;
+  color: #ffe600;
+  font-family: 'Cairo', sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  padding: 8px 20px;
+  border-radius: 30px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7), 0 0 15px rgba(255, 230, 0, 0.4);
+  pointer-events: none;
+  z-index: 120;
+  opacity: 0;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.game-toast-alert.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
